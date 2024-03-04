@@ -1,7 +1,7 @@
 [project]
 name = "openapi"
 authors = [
-    { name = "Solede", email = "info@solede.com"}
+    { name = "Solede SA", email = "info@solede.com"}
 ]
 description = "Gestione OpenApi"
 requires-python = ">=3.10"

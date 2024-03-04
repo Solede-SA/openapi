@@ -1,6 +1,6 @@
 app_name = "openapi"
 app_title = "Openapi"
-app_publisher = "Solede"
+app_publisher = "Solede SA"
 app_description = "Gestione OpenApi"
 app_email = "info@solede.com"
 app_license = "mit"
