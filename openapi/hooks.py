@@ -227,3 +227,53 @@ app_license = "mit"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+fixtures = [
+    {
+        "dt": "Custom Field",
+        "filters": [
+            [
+                "module",
+                "in",
+                [
+                    "Openapi",
+                ],
+            ],
+        ],
+    },
+    {
+        "dt": "OpenApiSettings",
+        "filters": [
+            [
+                "module",
+                "in",
+                [
+                    "Openapi",
+                ],
+            ],
+        ],
+    },
+    {
+        "dt": "Print Format",
+        "filters": [
+            [
+                "module",
+                "in",
+                [
+                    "Openapi",
+                ],
+            ],
+        ],
+    },
+    {
+        "dt": "Web Form",
+        "filters": [
+            [
+                "module",
+                "in",
+                [
+                    "Openapi",
+                ],
+            ],
+        ],
+    },
+]

@@ -1,0 +1,65 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-03-04 09:02:49.397325",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "is_sandbox",
+  "apply_signature",
+  "apply_legal_storage",
+  "active"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_sandbox",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Sandbox"
+  },
+  {
+   "default": "0",
+   "fieldname": "apply_signature",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Apply Signature"
+  },
+  {
+   "default": "0",
+   "fieldname": "apply_legal_storage",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Apply Legal Storage"
+  },
+  {
+   "default": "0",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Active"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-03-04 09:22:22.811728",
+ "modified_by": "Administrator",
+ "module": "Openapi",
+ "name": "Configurazione Fattura SDI",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
