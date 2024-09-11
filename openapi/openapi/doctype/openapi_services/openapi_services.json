@@ -1,0 +1,77 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "prompt",
+ "creation": "2024-09-11 11:48:51.425942",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "dati_servizio_section",
+  "column_break_moor",
+  "titolo_servizio",
+  "column_break_lddd",
+  "sandbox_url",
+  "url"
+ ],
+ "fields": [
+  {
+   "fieldname": "dati_servizio_section",
+   "fieldtype": "Section Break",
+   "label": "Dati Servizio"
+  },
+  {
+   "fieldname": "column_break_moor",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "titolo_servizio",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Titolo Servizio",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_lddd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sandbox_url",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Sandbox Url",
+   "reqd": 1
+  },
+  {
+   "fieldname": "url",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Url",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-09-11 12:03:27.093690",
+ "modified_by": "Administrator",
+ "module": "Openapi",
+ "name": "OpenApi Services",
+ "naming_rule": "Set by user",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

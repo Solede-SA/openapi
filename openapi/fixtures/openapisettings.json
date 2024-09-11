@@ -5,10 +5,10 @@
   "configurazione_fattura_sdi": [],
   "docstatus": 0,
   "doctype": "OpenApiSettings",
-  "modified": "2024-03-01 22:02:02.096597",
+  "modified": "2024-07-03 08:25:10.354055",
   "name": "OpenApiSettings",
-  "sandbox_api_key": "xiw2mss4k7daxbohkwqczskexftwkgvu",
-  "sandbox_api_token": "65e24172e21446ce0c0534eb",
+  "sandbox_api_key": "a89cx5arqrligjcrkuc0oydednjf4bzk",
+  "sandbox_api_token": "667d84e70746c8aec703a7cd",
   "sandbox_url": "https://test.sdi.openapi.it",
   "url_api": "https://sdi.openapi.it"
  }
