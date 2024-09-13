@@ -227,21 +227,13 @@ app_license = "mit"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+doctype_js = {
+    "Company": "public/js/custom_company.js",
+}
+
 fixtures = [
     {
         "dt": "Custom Field",
-        "filters": [
-            [
-                "module",
-                "in",
-                [
-                    "Openapi",
-                ],
-            ],
-        ],
-    },
-    {
-        "dt": "OpenApiSettings",
         "filters": [
             [
                 "module",

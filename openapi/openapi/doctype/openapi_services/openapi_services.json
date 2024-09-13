@@ -10,7 +10,6 @@
   "column_break_moor",
   "titolo_servizio",
   "column_break_lddd",
-  "sandbox_url",
   "url"
  ],
  "fields": [
@@ -35,13 +34,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "sandbox_url",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Sandbox Url",
-   "reqd": 1
-  },
-  {
    "fieldname": "url",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -51,7 +43,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-09-11 12:03:27.093690",
+ "modified": "2024-09-13 10:23:59.399242",
  "modified_by": "Administrator",
  "module": "Openapi",
  "name": "OpenApi Services",
