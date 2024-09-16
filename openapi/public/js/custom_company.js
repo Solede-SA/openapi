@@ -3,7 +3,6 @@ frappe.ui.form.on('Company', {
         if (frm.doc.custom_business_configuration != null) {
             frm.set_df_property('custom_crea_configurazione_openapi', 'hidden', true);
         }
-            
 
     },
     custom_crea_configurazione_openapi: function (frm) {
