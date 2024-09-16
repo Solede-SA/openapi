@@ -19,7 +19,8 @@
   {
    "fieldname": "data",
    "fieldtype": "JSON",
-   "label": "Data"
+   "label": "Data",
+   "read_only": 1
   },
   {
    "fieldname": "data_notifica",
@@ -32,7 +33,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-09-16 18:49:42.323960",
+ "modified": "2024-09-17 00:27:20.638235",
  "modified_by": "Administrator",
  "module": "Openapi",
  "name": "Notifiche SDI",
