@@ -269,4 +269,16 @@ fixtures = [
             ],
         ],
     },
+    {
+        "dt": "Property Setter",
+        "filters": [
+            [
+                "module",
+                "in",
+                [
+                    "Openapi",
+                ],
+            ],
+        ],
+    },
 ]
