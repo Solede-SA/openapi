@@ -1,42 +1,50 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2024-09-03 09:13:57.840893",
+ "creation": "2024-09-17 07:13:37.119820",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "notifica",
   "data",
-  "data_notifica"
+  "data_notifica",
+  "uuid"
  ],
  "fields": [
   {
    "fieldname": "notifica",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Notifica"
+   "label": "Notifica",
+   "reqd": 1
   },
   {
    "fieldname": "data",
    "fieldtype": "JSON",
    "label": "Data",
-   "read_only": 1
+   "reqd": 1
   },
   {
    "fieldname": "data_notifica",
    "fieldtype": "Datetime",
    "in_list_view": 1,
    "label": "Data Notifica",
-   "read_only": 1
+   "reqd": 1
+  },
+  {
+   "fieldname": "uuid",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "UUID"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-09-17 00:27:20.638235",
+ "modified": "2024-09-17 07:16:35.659179",
  "modified_by": "Administrator",
  "module": "Openapi",
- "name": "Notifiche SDI",
+ "name": "Notifiche sistema di interscambio",
  "owner": "Administrator",
  "permissions": [],
  "sort_field": "modified",

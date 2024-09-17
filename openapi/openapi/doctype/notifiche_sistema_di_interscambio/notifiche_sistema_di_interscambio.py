@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class NotificheSDI(Document):
+class Notifichesistemadiinterscambio(Document):
 	pass
