@@ -48,7 +48,6 @@ frappe.ui.form.on("Transazione SDI", {
             }
         );
 
-
         if (frm.doc.ultima_notifica) {
             let utlima_notifica = JSON.parse(frm.doc.ultima_notifica);
 
