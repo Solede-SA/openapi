@@ -29,12 +29,17 @@ def invia_fattura(docname, doctype):
     }
     response = requests.post(url, headers=headers, data=xml)
 
-    print(response.content)
-
     if response.status_code == 200:
         uuid = response.json()["data"]["uuid"]
-        doc.custom_uuid = uuid
-        doc.custom_stato_invio = "Inviata"
+
+        transazione_sdi = frappe.new_doc("Transazione SDI")
+        transazione_sdi.tipo_fattura = doctype
+        transazione_sdi.fattura = doc.name
+        transazione_sdi.stato_invio = "Inviata"
+        transazione_sdi.uuid = uuid
+        transazione_sdi.insert()
+
+        doc.custom_transazione_sdi = transazione_sdi.name
         doc.save()
         return f"Fattura inviata: {response.json()['data']}"
     else:
@@ -43,3 +48,22 @@ def invia_fattura(docname, doctype):
         return f"Errore nella richiesta: {message}"
 
     return xml
+
+
+@frappe.whitelist()
+def download(docname, doctype, type):
+    doc = frappe.get_doc(doctype, docname)
+    company = frappe.get_doc("Company", doc.company)
+    url = common_data.get_service("SDI", "invoices_download")
+    url += f"/{doc.custom_uuid}"
+    headers = {
+        "Authorization": company.custom_open_api_token,
+        "Accept": "application/" + type,
+    }
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        return response.content
+    else:
+        message = response.json().get("message", response.content)
+        return f"Errore nella richiesta: {message}"

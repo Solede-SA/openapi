@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class TransazioniSDI(Document):
+class TransazioneSDI(Document):
 	pass

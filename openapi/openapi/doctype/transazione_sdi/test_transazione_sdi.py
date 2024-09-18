@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestTransazioniSDI(FrappeTestCase):
+class TestTransazioneSDI(FrappeTestCase):
 	pass
