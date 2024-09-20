@@ -94,6 +94,14 @@ def save_notifica(data_ok):
 @frappe.whitelist(allow_guest=False)
 def supplier_invoice():
     print(frappe.request.data)
+    data = json.loads(frappe.request.data)
+    uuid = data["data"]["invoice"]["uuid"]
+
+    fattura_fornitore = frappe.new_doc("Fattura Fornitora SDI")
+    fattura_fornitore.dati_fattura = json.dumps(data, indent=2)
+    fattura_fornitore.uuid = uuid
+
+    fattura_fornitore.insert()
     return "OK from supplier_invoice"
 
 
@@ -134,6 +142,5 @@ def legal_storage_missing_vat():
 @frappe.whitelist(allow_guest=False)
 def legal_storage_receipt():
     data_ok = get_data_ok(frappe.request.data)
-    print(data_ok)
     save_notifica(data_ok)
     return "OK from legal_storage_receipt"
