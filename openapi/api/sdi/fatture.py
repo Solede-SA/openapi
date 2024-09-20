@@ -63,7 +63,12 @@ def download(docname, doctype, type):
     response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
-        return response.content
+        file_name = f"{doc.name}.{type}"
+        # Imposta l'header della risposta per il download del file
+        frappe.local.response.filename = file_name
+        frappe.local.response.filecontent = response.content
+        frappe.local.response.type = "download"
+        frappe.response.display_content_as = "attachment"
     else:
         message = response.json().get("message", response.content)
         return f"Errore nella richiesta: {message}"

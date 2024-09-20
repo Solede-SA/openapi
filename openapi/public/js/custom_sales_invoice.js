@@ -1,9 +1,5 @@
 frappe.ui.form.on('Sales Invoice', {
     refresh: function (frm) {
-        console.log(frm.doc.custom_stato_invio)
-
-        
-
         if (['NS', 'EC02', 'Non Inviata', undefined].includes(frm.doc.custom_stato_invio)) {
             frm.add_custom_button(
                 __("Invia a SDI OPENAPI"),
@@ -27,6 +23,18 @@ frappe.ui.form.on('Sales Invoice', {
                 __("Fatt. Elettronica"),
             );  
 
+        }
+
+        if (frm.doc.custom_uuid) {
+            frm.add_custom_button(
+            __("Scarica PDF"),
+            () => {
+                let url = "/api/method/openapi.api.sdi.fatture.download?doctype=" + frm.doc.doctype + "&docname=" + frm.doc.name + "&type=pdf";
+                // window.open(url);
+                window.location.href = url
+                },
+            __("Fatt. Elettronica"),
+            );
         }
     }
 })

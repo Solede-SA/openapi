@@ -18,33 +18,9 @@ frappe.ui.form.on("Transazione SDI", {
         frm.add_custom_button(
             __("Scarica PDF"),
             () => {
-                frm.call({
-                    method: "openapi.api.sdi.fatture.download",
-                    args: {
-                        doctype: frm.doc.tipo_fattura,
-                        docname: frm.doc.fattura,
-                        type: 'pdf',
-                    },
-                    callback: function (r) {
-                        if (r.message) {
-                            let bytes = new Uint8Array(r.message);
-                            const blob = new Blob([bytes], { type: 'application/pdf' });
-                            const url = URL.createObjectURL(blob);
-
-                            // Crea un elemento link e avvia il download
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `${frm.doc.fattura}.pdf`;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-
-                            // Revoca l'URL dell'oggetto dopo il download
-                            URL.revokeObjectURL(url);
-                        }
-                    },
-                    freeze: true,
-                });
+                let url = "/api/method/openapi.api.sdi.fatture.download?doctype=" + frm.doc.tipo_fattura + "&docname=" + frm.doc.fattura + "&type=pdf";
+                // window.open(url);
+                window.location.href = url
             }
         );
 
