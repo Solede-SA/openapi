@@ -55,7 +55,14 @@ def download(docname, doctype, type):
     doc = frappe.get_doc(doctype, docname)
     company = frappe.get_doc("Company", doc.company)
     url = common_data.get_service("SDI", "invoices_download")
-    url += f"/{doc.custom_uuid}"
+
+    if hasattr(doc, "custom_uuid"):
+        url += f"/{doc.custom_uuid}"
+    elif hasattr(doc, "uuid"):
+        url += f"/{doc.uuid}"
+    else:
+        return "UUID non trovato"
+
     headers = {
         "Authorization": company.custom_open_api_token,
         "Accept": "application/" + type,

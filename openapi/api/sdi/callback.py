@@ -5,6 +5,42 @@ from datetime import datetime
 import pytz
 import pprint
 
+import json
+
+
+def search_value_in_json(data, target_key):
+    """
+    Cerca ricorsivamente un valore in una struttura JSON dato un determinato nome di chiave o un percorso parziale.
+
+    :param data: La struttura JSON in cui cercare.
+    :param target_key: Il nome della chiave del valore da cercare o un percorso parziale.
+    :return: Una lista di valori trovati per la chiave specificata o il percorso parziale.
+    """
+    keys = target_key.split(".")
+
+    def search(data, keys):
+        if not keys:
+            yield data
+            return
+
+        current_key = keys[0]
+        remaining_keys = keys[1:]
+
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if key == current_key:
+                    yield from search(value, remaining_keys)
+                if isinstance(value, (dict, list)):
+                    yield from search(value, keys)
+        elif isinstance(data, list):
+            for item in data:
+                yield from search(item, keys)
+
+    results = list(search(data, keys))
+    if len(results) == 1:
+        return results[0]
+    return results
+
 
 def get_data_ok(request):
     data = json.loads(frappe.request.data)
@@ -93,13 +129,24 @@ def save_notifica(data_ok):
 
 @frappe.whitelist(allow_guest=False)
 def supplier_invoice():
-    print(frappe.request.data)
     data = json.loads(frappe.request.data)
-    uuid = data["data"]["invoice"]["uuid"]
+    partita_iva_company = search_value_in_json(
+        data,
+        "cessionario_committente.dati_anagrafici.id_fiscale_iva.id_codice",
+    )
 
-    fattura_fornitore = frappe.new_doc("Fattura Fornitora SDI")
+    company_list = frappe.get_list("Company", filters={"tax_id": partita_iva_company})
+    if len(company_list) == 0:
+        frappe.throw(f"Company not found: {partita_iva_company}")
+    else:
+        company = frappe.get_doc("Company", company_list[0]["name"])
+
+    uuid = search_value_in_json(data, "invoice.uuid")
+
+    fattura_fornitore = frappe.new_doc("Fattura Fornitori SDI")
     fattura_fornitore.dati_fattura = json.dumps(data, indent=2)
     fattura_fornitore.uuid = uuid
+    fattura_fornitore.company = company
 
     fattura_fornitore.insert()
     return "OK from supplier_invoice"

@@ -6,7 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "uuid",
-  "dati_fattura"
+  "dati_fattura",
+  "company"
  ],
  "fields": [
   {
@@ -18,11 +19,17 @@
    "fieldname": "uuid",
    "fieldtype": "Data",
    "label": "UUID"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-09-20 17:01:16.045348",
+ "modified": "2024-09-21 09:14:02.951289",
  "modified_by": "Administrator",
  "module": "Openapi",
  "name": "Fattura Fornitori SDI",
