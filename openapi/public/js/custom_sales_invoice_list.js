@@ -1,7 +1,6 @@
 frappe.listview_settings['Sales Invoice'] = {
         formatters: {
         custom_stato_invio: function (value, doc, row) {
-                console.log(row);
                 if (value == '') {
                     return '';
                 }
