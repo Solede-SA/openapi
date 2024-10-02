@@ -233,6 +233,10 @@ doctype_js = {
     "Purchase Invoice": "public/js/custom_purchase_invoice.js",
 }
 
+doctype_list_js = {
+    "Sales Invoice": "public/js/custom_sales_invoice_list.js",
+}
+
 fixtures = [
     {
         "dt": "Custom Field",
