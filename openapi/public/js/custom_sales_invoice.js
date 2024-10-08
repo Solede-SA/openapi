@@ -2,7 +2,7 @@ frappe.ui.form.on('Sales Invoice', {
     refresh: function (frm) {
         if (['NS', 'EC02', 'Non Inviata', undefined].includes(frm.doc.custom_stato_invio)) {
             frm.add_custom_button(
-                __("Invia a SDI OPENAPI"),
+                __("Invia a Sistema di Interscambio"),
                 () => {
                     frm.call({
                         method: "openapi.api.sdi.fatture.invia_fattura",
