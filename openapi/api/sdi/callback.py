@@ -135,6 +135,19 @@ def supplier_invoice():
         "cessionario_committente.dati_anagrafici.id_fiscale_iva.id_codice",
     )
 
+    partita_iva_fornitore = search_value_in_json(
+        data,
+        "cedente_prestatore.dati_anagrafici.id_fiscale_iva.id_codice",
+    )
+
+    denominazione_fornitore = search_value_in_json(
+        data,
+        "cedente_prestatore.dati_anagrafici.anagrafica.denominazione",
+    )
+
+    print(f"partita_iva_fornitore: {partita_iva_fornitore}")
+    print(f"denominazione_fornitore: {denominazione_fornitore}")
+
     company_list = frappe.get_list("Company", filters={"tax_id": partita_iva_company})
     if len(company_list) == 0:
         frappe.throw(f"Company not found: {partita_iva_company}")
@@ -147,6 +160,8 @@ def supplier_invoice():
     fattura_fornitore.dati_fattura = json.dumps(data, indent=2)
     fattura_fornitore.uuid = uuid
     fattura_fornitore.company = company
+    fattura_fornitore.partita_iva_fornitore = partita_iva_fornitore
+    fattura_fornitore.denominazione_fornitore = denominazione_fornitore
 
     fattura_fornitore.insert()
     return "OK from supplier_invoice"
