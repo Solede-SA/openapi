@@ -4,19 +4,35 @@ frappe.listview_settings['Sales Invoice'] = {
                 if (value == '') {
                     return '';
                 }
-                
-                if (value == 'NS') {
-                    let color = 'red';
-                    return `<span style="color:${color}; font-weight: bold;">${row.custom_stato_invio_descrizione}</span>`;
-                } else if (value == 'RC') {
-                    let color = 'green';
-                    return `<span style="color:${color}; font-weight: bold;">${row.custom_stato_invio_descrizione}</span>`;
-                } else if (value == 'MC') {
-                    let color = 'red';
-                    return `<span style="color:${color}; font-weight: bold;">${row.custom_stato_invio_descrizione}</span>`;
-                } else {
-                    return row.custom_stato_invio_descrizione
+
+                let color = 'black';
+                let font_weight = 'normal';
+
+                switch (value) {
+                    case 'RC':
+                        color = 'green';
+                        font_weight = 'bold';
+                        break;
+                    case 'EC01':
+                        color = 'green';
+                        font_weight = 'bold';
+                        break;
+                    case 'NS':
+                        color = 'red';
+                        font_weight = 'bold';
+                        break;
+                    case 'MC':
+                        color = 'red';
+                        font_weight = 'bold';
+                        break;
+                    case 'EC02':
+                        color = 'red';
+                        font_weight = 'bold';
+                        break;
                 }
+                
+                return `<span style="color:${color}; font-weight: ${font_weight};">${row.custom_stato_invio_descrizione}</span>`;
+
             }
         },
         
