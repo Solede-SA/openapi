@@ -75,3 +75,34 @@ def get_advanced(data):
     except Exception as e:
         print(e)
         return e
+
+
+@frappe.whitelist(allow_guest=True)
+def get_full(data):
+    print(data)
+    vatCode_or_taxCode = data.get("vatCode_or_taxCode")
+    company = get_company_doc()
+
+    if not vatCode_or_taxCode:
+        return "Inserire un codice fiscale, partita iva"
+
+    queryFilter = f"/{vatCode_or_taxCode}"
+
+    url = common_data.get_service("Company", "IT-advanced")
+    headers = {
+        "Authorization": company.custom_open_api_token,
+        "Content-Type": "application/json",
+    }
+
+    url += queryFilter
+
+    try:
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return response.json()
+    except Exception as e:
+        print(e)
+        return e
