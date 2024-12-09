@@ -12,7 +12,7 @@ def get_company_doc():
 @frappe.whitelist()
 def search_company(data):
     companyName = data.get("companyName")
-    limit = data.get("limit", 20)
+    limit = data.get("limit", 10)
     url = common_data.get_service("Company", "IT-search")
     company = get_company_doc()
 
