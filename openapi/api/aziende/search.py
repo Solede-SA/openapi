@@ -88,7 +88,7 @@ def get_full(data):
 
     queryFilter = f"/{vatCode_or_taxCode}"
 
-    url = common_data.get_service("Company", "IT-advanced")
+    url = common_data.get_service("Company", "IT-full")
     headers = {
         "Authorization": company.custom_open_api_token,
         "Content-Type": "application/json",
