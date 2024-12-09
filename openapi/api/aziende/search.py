@@ -21,7 +21,7 @@ def search_company(data):
         "Content-Type": "application/json",
     }
 
-    queryFilter = "?dataEnrichment=start"
+    queryFilter = "?dataEnrichment=name"
 
     if companyName:
         queryFilter += f"&companyName={companyName}"
