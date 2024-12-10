@@ -45,7 +45,7 @@ def search_company(data):
         return e
 
 
-@frappe.whitelist(allow_guest=False)
+@frappe.whitelist()
 def get_advanced(data):
     vatCode_taxCode_or_id = data.get("vatCode_taxCode_or_id")
     company = get_company_doc()
@@ -77,7 +77,7 @@ def get_advanced(data):
         return e
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_full(data):
     print(data)
     vatCode_or_taxCode = data.get("vatCode_or_taxCode")
@@ -106,3 +106,47 @@ def get_full(data):
     except Exception as e:
         print(e)
         return e
+
+
+import requests
+from bs4 import BeautifulSoup
+
+
+@frappe.whitelist(allow_guest=True)
+def get_code_meaning(data):
+    code = data.get("code")
+    url = "https://docs.openapi.it/company-legend.html"
+
+    # Effettua la richiesta alla pagina
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception(
+            f"Impossibile accedere alla pagina. Status code: {response.status_code}"
+        )
+
+    # Parsing dell'HTML con BeautifulSoup
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Cerchiamo tutte le tabelle della pagina
+    tables = soup.find_all("table")
+
+    # Iteriamo su tutte le tabelle
+    for table in tables:
+        rows = table.find_all("tr")
+        # Iteriamo su tutte le righe
+        for row in rows:
+            # Cerchiamo l'elemento <th> con attributo id (che dovrebbe contenere il codice)
+            th = row.find("th", id=True)
+            if th is not None:
+                th_text = th.get_text(strip=True)
+                if th_text == code:
+                    # Abbiamo trovato la riga giusta, ora cerchiamo i td
+                    cells = row.find_all("td")
+                    # Dato che la struttura è <th>, <td>, <td>, <td>
+                    # Il significato è nella seconda <td>, quindi cells[1]
+                    if len(cells) >= 2:
+                        meaning = cells[1].get_text(strip=True)
+                        return meaning
+
+    # Se non troviamo il codice
+    return f"Significato non trovato per il codice {code}"
