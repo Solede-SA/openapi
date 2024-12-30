@@ -2,6 +2,7 @@ import frappe
 import json
 import openapi.tools.common_data as common_data
 import requests
+from frappe.utils.caching import redis_cache
 
 
 def get_company_doc():
@@ -46,6 +47,7 @@ def search_company(data):
 
 
 @frappe.whitelist()
+@redis_cache(ttl=1728000)
 def get_advanced(data):
     vatCode_taxCode_or_id = data.get("vatCode_taxCode_or_id")
     company = get_company_doc()
@@ -78,6 +80,7 @@ def get_advanced(data):
 
 
 @frappe.whitelist()
+@redis_cache(ttl=1728000)
 def get_full(data):
     print(data)
     vatCode_or_taxCode = data.get("vatCode_or_taxCode")
@@ -112,7 +115,7 @@ import requests
 from bs4 import BeautifulSoup
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_code_meaning(data):
     code = data.get("code")
     url = "https://docs.openapi.it/company-legend.html"

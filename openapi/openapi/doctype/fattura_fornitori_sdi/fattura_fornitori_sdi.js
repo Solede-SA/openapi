@@ -14,5 +14,28 @@ frappe.ui.form.on("Fattura Fornitori SDI", {
             }
         );
 
+        frm.add_custom_button(
+            __("Importa Fattura"),
+            () => {
+                frappe.call({
+                    method: "openapi.api.eInvoice.purchase_invoice.process_supplier_invoice",
+                    args: {
+                        "json_data_string": frm.doc.dati_fattura,
+                        "fattura_fornitori_sdi": frm.doc.name,
+                    },
+                    callback: function (r) {
+                        if (r.message) {
+                            frappe.msgprint(r.message);
+                            frappe.set_route("Form", "Purchase Invoice", r.message);
+                        }
+                    },
+                    error: function (r) {
+                        frappe.throw(r.message);
+                    }
+                });
+
+            }
+        );
+
 	},
 });

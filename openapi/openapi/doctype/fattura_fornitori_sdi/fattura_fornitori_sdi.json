@@ -6,8 +6,10 @@
  "engine": "InnoDB",
  "field_order": [
   "denominazione_fornitore",
+  "fattura",
   "column_break_tcxn",
   "partita_iva_fornitore",
+  "stato",
   "section_break_ndmu",
   "uuid",
   "dati_fattura",
@@ -57,11 +59,30 @@
   {
    "fieldname": "section_break_ndmu",
    "fieldtype": "Section Break"
+  },
+  {
+   "default": "Da importare",
+   "fieldname": "stato",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Stato",
+   "options": "Da importare\nImportata",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fattura",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Fattura",
+   "options": "Purchase Invoice",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-10-09 09:28:44.413060",
+ "modified": "2024-12-30 11:28:28.407329",
  "modified_by": "Administrator",
  "module": "Openapi",
  "name": "Fattura Fornitori SDI",
