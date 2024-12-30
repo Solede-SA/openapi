@@ -62,6 +62,14 @@ def process_supplier_invoice(json_data_string, fattura_fornitori_sdi):
             "id_paese"
         ]
 
+        # Verifica il tipo di documento
+        document_type_code = general_data["tipo_documento"]
+        is_autofattura = check_document_type(document_type_code)
+        if is_autofattura:
+            frappe.throw(
+                f"La fattura {invoice_data['filename']} è una autofattura e non verrà importata."
+            )
+
         # Controlla se il fornitore esiste
         supplier = frappe.db.exists("Supplier", {"tax_id": supplier_vat_id})
 
@@ -434,3 +442,31 @@ def _get_item_code(line):
         return item_code
     else:
         return "Servizi Generici"
+
+
+def check_document_type(document_type_code):
+    """
+    Verifica il tipo di documento e avvisa se è un'autofattura.
+
+    Args:
+        document_type_code: Il codice del tipo di documento (es. "TD01").
+
+    Returns:
+        True se è un'autofattura, False altrimenti.
+    """
+    try:
+        doc_type = frappe.get_doc(
+            "Tipologia di documento e-Invoice", document_type_code
+        )
+        if doc_type.tipologia == "AutoFattura":
+            frappe.msgprint(
+                f"Attenzione: Il documento con codice {document_type_code} è una autofattura e non verrà importato.",
+                title="Autofattura rilevata",
+                indicator="red",
+            )
+            return True
+    except frappe.DoesNotExistError:
+        frappe.logger().warning(
+            f"Tipo documento {document_type_code} non trovato in 'Tipologia di documento e-Invoice'"
+        )
+    return False

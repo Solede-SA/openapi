@@ -1,7 +1,11 @@
 frappe.ui.form.on('Purchase Invoice', {
     refresh: function (frm) {
-        console.log(frm.doc.custom_tipo_di_documento)
         let tipo_documento = frm.doc.custom_tipo_di_documento;
+
+        if (!tipo_documento) {
+            return;
+        }
+
         frappe.db.get_doc("Tipologia di documento e-Invoice", tipo_documento).then(statoDocumento => {
             console.log(statoDocumento);
             if (statoDocumento.tipologia == "AutoFattura") {
