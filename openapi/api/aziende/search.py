@@ -47,7 +47,6 @@ def search_company(data):
 
 
 @frappe.whitelist()
-@redis_cache(ttl=1728000)
 def get_advanced(data):
     vatCode_taxCode_or_id = data.get("vatCode_taxCode_or_id")
     company = get_company_doc()
@@ -80,14 +79,18 @@ def get_advanced(data):
 
 
 @frappe.whitelist()
-@redis_cache(ttl=1728000)
 def get_full(data):
-    print(data)
     vatCode_or_taxCode = data.get("vatCode_or_taxCode")
     company = get_company_doc()
 
     if not vatCode_or_taxCode:
         return "Inserire un codice fiscale, partita iva"
+
+    chiave_cache = f"openapi|get_full|{vatCode_or_taxCode}"
+    risultato_cache = frappe.cache.get_value(chiave_cache)
+    if risultato_cache is not None:
+        print("Risultato preso dalla cache")
+        return risultato_cache
 
     queryFilter = f"/{vatCode_or_taxCode}"
 
@@ -101,8 +104,8 @@ def get_full(data):
 
     try:
         response = requests.get(url, headers=headers)
-
         if response.status_code == 200:
+            frappe.cache.set_value(chiave_cache, response.json(), expires_in_sec=3600)
             return response.json()
         else:
             return response.json()
