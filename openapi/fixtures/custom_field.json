@@ -1461,7 +1461,7 @@
   "modified": "2024-09-17 15:33:06.105443",
   "module": "Openapi",
   "name": "Sales Invoice-custom_descrizione_stato",
-  "no_copy": 0,
+  "no_copy": 1,
   "non_negative": 0,
   "options": null,
   "permlevel": 0,
