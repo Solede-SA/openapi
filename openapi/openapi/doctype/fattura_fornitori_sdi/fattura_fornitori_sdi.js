@@ -168,7 +168,7 @@ function show_items_dialog(frm, json_data, supplier_data) {
                                     description: values.description,
                                     stock_uom: values.uom,
                                     is_stock_item: 0,
-                                    is_purchase_item: 1,
+                                    is_purchase_item: 0,
                                     item_defaults: [{
                                         company: frm.doc.company,
                                         expense_account: values.expense_account,
