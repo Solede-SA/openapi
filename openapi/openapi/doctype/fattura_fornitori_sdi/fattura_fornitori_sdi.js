@@ -102,7 +102,6 @@ function show_items_dialog(frm, json_data, supplier_data) {
            get_query: () => {
                return {
                    filters: {
-                       'root_type': 'Expense',
                        'is_group': 0,
                        'company': frm.doc.company
                    }
@@ -148,7 +147,6 @@ function show_items_dialog(frm, json_data, supplier_data) {
                             reqd: 1,
                             get_query: () => ({
                                 filters: {
-                                    'root_type': 'Expense',
                                     'is_group': 0,
                                     'company': frm.doc.company
                                 }
@@ -168,7 +166,8 @@ function show_items_dialog(frm, json_data, supplier_data) {
                                     description: values.description,
                                     stock_uom: values.uom,
                                     is_stock_item: 0,
-                                    is_purchase_item: 0,
+                                    is_sales_item: 0,
+                                    is_purchase_item: 1,
                                     item_defaults: [{
                                         company: frm.doc.company,
                                         expense_account: values.expense_account,
