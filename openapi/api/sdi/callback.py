@@ -162,6 +162,7 @@ def supplier_invoice():
     fattura_fornitore.company = company
     fattura_fornitore.partita_iva_fornitore = partita_iva_fornitore
     fattura_fornitore.denominazione_fornitore = denominazione_fornitore
+    fattura_fornitore.via_webhook = 1
 
     fattura_fornitore.insert()
     return "OK from supplier_invoice"

@@ -1,6 +1,12 @@
 frappe.ui.form.on("Fattura Fornitori SDI", {
     refresh(frm) {
-        frm.disable_save();
+        // Check if we're in development mode
+        if (!frappe.boot.developer_mode) {
+            frm.disable_save();
+        } else {
+            // In development mode, enable save button
+            frm.enable_save();
+        }
 
         frm.add_custom_button(__("Scarica PDF"), () => {
             window.location.href = `/api/method/openapi.api.sdi.fatture.download?doctype=Fattura Fornitori SDI&docname=${frm.doc.name}&type=pdf`;
@@ -41,7 +47,38 @@ frappe.ui.form.on("Fattura Fornitori SDI", {
 
 
 function show_items_dialog(frm, json_data, supplier_data) {
-   const invoice_lines = json_data.data.invoice.payload.fattura_elettronica_body[0].dati_beni_servizi.dettaglio_linee;
+   // Filter out lines with quantity 0 or null
+   const allLines = json_data.data.invoice.payload.fattura_elettronica_body[0].dati_beni_servizi.dettaglio_linee;
+   const invoice_lines = allLines.filter(line => {
+       // Check if line should be included based on quantity or total price
+       try {
+           // Include if it has a valid quantity greater than 0
+           if (line.quantita) {
+               const qty = parseFloat(line.quantita);
+               if (!isNaN(qty) && qty > 0) return true;
+           }
+           
+           // Include if quantita is null/missing but has a valid price_totale greater than 0
+           if (line.prezzo_totale) {
+               const total = parseFloat(line.prezzo_totale);
+               if (!isNaN(total) && total > 0) return true;
+           }
+           
+           // Exclude in all other cases
+           return false;
+       } catch (e) {
+           return false; // If error in parsing, filter out the line
+       }
+   });
+   
+   // Display info about filtered lines
+   if (allLines.length !== invoice_lines.length) {
+       const skippedCount = allLines.length - invoice_lines.length;
+       frappe.show_alert({
+           message: __(`${skippedCount} righe con quantità zero ignorate automaticamente`),
+           indicator: 'blue'
+       }, 5);
+   }
 
    const dialog_fields = [
        {
@@ -201,11 +238,12 @@ function show_items_dialog(frm, json_data, supplier_data) {
         primary_action(values) {
             let item_mappings = {};
             invoice_lines.forEach((line, idx) => {
+                // Make sure we use the original line number
                 item_mappings[line.numero_linea] = {
                     item_code: values[`item_${idx}`],
                     account: values[`account_${idx}`],
                     description: line.descrizione,
-                    qty: line.quantita || 1,
+                    qty: parseFloat(line.quantita) || 1, // Convert to number and ensure no zeros
                     rate: line.prezzo_unitario,
                     tax_rate: line.aliquota_iva,
                     tax_nature: line.natura

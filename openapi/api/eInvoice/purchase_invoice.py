@@ -145,15 +145,57 @@ def process_supplier_invoice(
 def _prepare_invoice_items_with_mapping(invoice_lines, mappings):
     items = []
     for line in invoice_lines:
+        # Determine if this line should be included
+        try:
+            has_valid_quantity = False
+            has_valid_price_total = False
+            
+            # Check for valid quantity > 0
+            if line.get("quantita"):
+                quantity = float(line.get("quantita", 0))
+                has_valid_quantity = quantity > 0
+                
+            # Check for valid price_total > 0
+            if line.get("prezzo_totale"):
+                price_total = float(line.get("prezzo_totale", 0))
+                has_valid_price_total = price_total > 0
+                
+            # Skip if neither quantity nor price_total is valid
+            if not (has_valid_quantity or has_valid_price_total):
+                continue
+                
+        except (ValueError, TypeError):
+            # If conversion errors occur, only include if price_total exists and is valid
+            try:
+                if line.get("prezzo_totale") and float(line.get("prezzo_totale", 0)) > 0:
+                    pass  # Keep this line
+                else:
+                    continue  # Skip this line
+            except (ValueError, TypeError):
+                continue  # Skip if we can't convert price_total either
+            
         mapping = mappings.get(str(line["numero_linea"]))
         if mapping:
             # Get UOM from item defaults
             uom = frappe.db.get_value("Item", mapping["item_code"], "stock_uom") or "Nr"
+            # Ensure we have a valid quantity (default to 1 if null or 0)
+            quantity = 1  # Default
+            try:
+                if line.get("quantita") and float(line.get("quantita", 0)) > 0:
+                    # Use actual quantity if available and valid
+                    quantity = float(line["quantita"])
+                elif line.get("prezzo_totale") and float(line.get("prezzo_totale", 0)) > 0:
+                    # For lines with valid price_total but null/zero quantity, keep qty as 1
+                    quantity = 1
+            except (ValueError, TypeError):
+                # If we can't convert to float, use default quantity
+                pass
+                
             items.append(
                 {
                     "item_code": mapping["item_code"],
                     "description": mapping["description"],
-                    "qty": line["quantita"] if line["quantita"] else 1,
+                    "qty": quantity,
                     "rate": line["prezzo_unitario"],
                     "expense_account": mapping["account"],
                     "uom": uom,
@@ -240,11 +282,53 @@ def _prepare_invoice_items(invoice_lines, company):
     """
     items = []
     for line in invoice_lines:
+        # Determine if this line should be included
+        try:
+            has_valid_quantity = False
+            has_valid_price_total = False
+            
+            # Check for valid quantity > 0
+            if line.get("quantita"):
+                quantity = float(line.get("quantita", 0))
+                has_valid_quantity = quantity > 0
+                
+            # Check for valid price_total > 0
+            if line.get("prezzo_totale"):
+                price_total = float(line.get("prezzo_totale", 0))
+                has_valid_price_total = price_total > 0
+                
+            # Skip if neither quantity nor price_total is valid
+            if not (has_valid_quantity or has_valid_price_total):
+                continue
+                
+        except (ValueError, TypeError):
+            # If conversion errors occur, only include if price_total exists and is valid
+            try:
+                if line.get("prezzo_totale") and float(line.get("prezzo_totale", 0)) > 0:
+                    pass  # Keep this line
+                else:
+                    continue  # Skip this line
+            except (ValueError, TypeError):
+                continue  # Skip if we can't convert price_total either
+            
+        # Ensure we have a valid quantity (default to 1 if null or 0)
+        quantity = 1  # Default
+        try:
+            if line.get("quantita") and float(line.get("quantita", 0)) > 0:
+                # Use actual quantity if available and valid
+                quantity = float(line["quantita"])
+            elif line.get("prezzo_totale") and float(line.get("prezzo_totale", 0)) > 0:
+                # For lines with valid price_total but null/zero quantity, keep qty as 1
+                quantity = 1
+        except (ValueError, TypeError):
+            # If we can't convert to float, use default quantity
+            pass
+            
         items.append(
             {
                 "item_code": _get_item_code(line),
                 "description": line["descrizione"],
-                "qty": line["quantita"] if line["quantita"] else 1,
+                "qty": quantity,
                 "rate": line["prezzo_unitario"],
                 "uom": _get_uom(),
                 "price_list_rate": line["prezzo_unitario"],
