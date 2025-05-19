@@ -206,6 +206,7 @@ def legal_storage_missing_vat():
 
 @frappe.whitelist(allow_guest=False)
 def legal_storage_receipt():
-    data_ok = get_data_ok(frappe.request.data)
-    save_notifica(data_ok)
+    # Skip saving notification for legal-storage-receipt events
+    # data_ok = get_data_ok(frappe.request.data)
+    # save_notifica(data_ok)
     return "OK from legal_storage_receipt"
