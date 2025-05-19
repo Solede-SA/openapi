@@ -69,7 +69,9 @@ def get_data_ok(request):
 
     elif event == "legal-storage-receipt":
         uuid = data["data"]["object_id"]
-        data_notifica = data["data"]["receipt_received_at"]
+        # Use updated_at if receipt_received_at is not present
+        data_notifica = data["data"].get("receipt_received_at", data["data"]["updated_at"])
+        stato = data["data"].get("status", "")
 
     lista_transazioni = frappe.get_list(
         "Transazione SDI",
