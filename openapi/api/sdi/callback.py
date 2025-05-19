@@ -131,43 +131,73 @@ def save_notifica(data_ok):
 
 @frappe.whitelist(allow_guest=False)
 def supplier_invoice():
-    data = json.loads(frappe.request.data)
-    partita_iva_company = search_value_in_json(
-        data,
-        "cessionario_committente.dati_anagrafici.id_fiscale_iva.id_codice",
-    )
+    try:
+        # Log l'inizio del processo
+        frappe.log_error("Inizio elaborazione fattura fornitore", "Supplier Invoice Log")
+        
+        # Log dei dati ricevuti
+        frappe.log_error(f"Dati ricevuti: {frappe.request.data}", "Supplier Invoice Log")
+        
+        data = json.loads(frappe.request.data)
+        
+        # Log dopo il parsing JSON
+        frappe.log_error("Parsing JSON completato", "Supplier Invoice Log")
+        
+        partita_iva_company = search_value_in_json(
+            data,
+            "cessionario_committente.dati_anagrafici.id_fiscale_iva.id_codice",
+        )
+        frappe.log_error(f"Partita IVA azienda estratta: {partita_iva_company}", "Supplier Invoice Log")
 
-    partita_iva_fornitore = search_value_in_json(
-        data,
-        "cedente_prestatore.dati_anagrafici.id_fiscale_iva.id_codice",
-    )
+        partita_iva_fornitore = search_value_in_json(
+            data,
+            "cedente_prestatore.dati_anagrafici.id_fiscale_iva.id_codice",
+        )
+        frappe.log_error(f"Partita IVA fornitore estratta: {partita_iva_fornitore}", "Supplier Invoice Log")
 
-    denominazione_fornitore = search_value_in_json(
-        data,
-        "cedente_prestatore.dati_anagrafici.anagrafica.denominazione",
-    )
+        denominazione_fornitore = search_value_in_json(
+            data,
+            "cedente_prestatore.dati_anagrafici.anagrafica.denominazione",
+        )
+        frappe.log_error(f"Denominazione fornitore estratta: {denominazione_fornitore}", "Supplier Invoice Log")
 
-    print(f"partita_iva_fornitore: {partita_iva_fornitore}")
-    print(f"denominazione_fornitore: {denominazione_fornitore}")
+        print(f"partita_iva_fornitore: {partita_iva_fornitore}")
+        print(f"denominazione_fornitore: {denominazione_fornitore}")
 
-    company_list = frappe.get_list("Company", filters={"tax_id": partita_iva_company})
-    if len(company_list) == 0:
-        frappe.throw(f"Company not found: {partita_iva_company}")
-    else:
-        company = frappe.get_doc("Company", company_list[0]["name"])
+        frappe.log_error("Ricerca company iniziata", "Supplier Invoice Log")
+        company_list = frappe.get_list("Company", filters={"tax_id": partita_iva_company})
+        frappe.log_error(f"Risultato ricerca company: {company_list}", "Supplier Invoice Log")
+        
+        if len(company_list) == 0:
+            error_msg = f"Company non trovata: {partita_iva_company}"
+            frappe.log_error(error_msg, "Supplier Invoice Error")
+            frappe.throw(error_msg)
+        else:
+            company = frappe.get_doc("Company", company_list[0]["name"])
+            frappe.log_error(f"Company trovata: {company.name}", "Supplier Invoice Log")
 
-    uuid = search_value_in_json(data, "invoice.uuid")
+        uuid = search_value_in_json(data, "invoice.uuid")
+        frappe.log_error(f"UUID estratto: {uuid}", "Supplier Invoice Log")
 
-    fattura_fornitore = frappe.new_doc("Fattura Fornitori SDI")
-    fattura_fornitore.dati_fattura = json.dumps(data, indent=2)
-    fattura_fornitore.uuid = uuid
-    fattura_fornitore.company = company
-    fattura_fornitore.partita_iva_fornitore = partita_iva_fornitore
-    fattura_fornitore.denominazione_fornitore = denominazione_fornitore
-    fattura_fornitore.via_webhook = 1
+        frappe.log_error("Creazione documento fattura fornitore", "Supplier Invoice Log")
+        fattura_fornitore = frappe.new_doc("Fattura Fornitori SDI")
+        fattura_fornitore.dati_fattura = json.dumps(data, indent=2)
+        fattura_fornitore.uuid = uuid
+        fattura_fornitore.company = company
+        fattura_fornitore.partita_iva_fornitore = partita_iva_fornitore
+        fattura_fornitore.denominazione_fornitore = denominazione_fornitore
+        fattura_fornitore.via_webhook = 1
 
-    fattura_fornitore.insert()
-    return "OK from supplier_invoice"
+        frappe.log_error("Inserimento fattura fornitore", "Supplier Invoice Log")
+        fattura_fornitore.insert()
+        frappe.log_error(f"Fattura fornitore inserita con successo: {fattura_fornitore.name}", "Supplier Invoice Log")
+        
+        return "OK from supplier_invoice"
+    except Exception as e:
+        error_details = f"Errore durante l'elaborazione della fattura fornitore: {str(e)}\n{frappe.get_traceback()}"
+        frappe.log_error(error_details, "Supplier Invoice Error")
+        # Rilancia l'eccezione per restituire l'errore HTTP
+        raise
 
 
 @frappe.whitelist(allow_guest=False)
