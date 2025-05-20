@@ -129,14 +129,15 @@ def save_notifica(data_ok):
     fattura.save()
 
 
-@frappe.whitelist(allow_guest=False)
+@frappe.whitelist(allow_guest=True)
 def supplier_invoice():
     try:
         # Log l'inizio del processo
         frappe.log_error("Inizio elaborazione fattura fornitore", "Supplier Invoice Log")
         
-        # Log dei dati ricevuti
-        frappe.log_error(f"Dati ricevuti: {frappe.request.data}", "Supplier Invoice Log")
+        # Log limitato dei dati ricevuti
+        data_preview = str(frappe.request.data)[:100] + "..." if len(str(frappe.request.data)) > 100 else str(frappe.request.data)
+        frappe.log_error(f"Preview dati ricevuti: {data_preview}", "Supplier Invoice Log")
         
         data = json.loads(frappe.request.data)
         
@@ -147,26 +148,35 @@ def supplier_invoice():
             data,
             "cessionario_committente.dati_anagrafici.id_fiscale_iva.id_codice",
         )
-        frappe.log_error(f"Partita IVA azienda estratta: {partita_iva_company}", "Supplier Invoice Log")
+        if partita_iva_company:
+            frappe.log_error(f"Partita IVA azienda estratta: {partita_iva_company}", "Supplier Invoice Log")
+        else:
+            frappe.log_error("Partita IVA azienda non trovata", "Supplier Invoice Log")
 
         partita_iva_fornitore = search_value_in_json(
             data,
             "cedente_prestatore.dati_anagrafici.id_fiscale_iva.id_codice",
         )
-        frappe.log_error(f"Partita IVA fornitore estratta: {partita_iva_fornitore}", "Supplier Invoice Log")
+        if partita_iva_fornitore:
+            frappe.log_error(f"Partita IVA fornitore estratta: {partita_iva_fornitore}", "Supplier Invoice Log")
+        else:
+            frappe.log_error("Partita IVA fornitore non trovata", "Supplier Invoice Log")
 
         denominazione_fornitore = search_value_in_json(
             data,
             "cedente_prestatore.dati_anagrafici.anagrafica.denominazione",
         )
-        frappe.log_error(f"Denominazione fornitore estratta: {denominazione_fornitore}", "Supplier Invoice Log")
+        if denominazione_fornitore:
+            frappe.log_error(f"Denominazione fornitore estratta: {denominazione_fornitore}", "Supplier Invoice Log")
+        else:
+            frappe.log_error("Denominazione fornitore non trovata", "Supplier Invoice Log")
 
         print(f"partita_iva_fornitore: {partita_iva_fornitore}")
         print(f"denominazione_fornitore: {denominazione_fornitore}")
 
         frappe.log_error("Ricerca company iniziata", "Supplier Invoice Log")
         company_list = frappe.get_list("Company", filters={"tax_id": partita_iva_company})
-        frappe.log_error(f"Risultato ricerca company: {company_list}", "Supplier Invoice Log")
+        frappe.log_error(f"Trovate {len(company_list)} company", "Supplier Invoice Log")
         
         if len(company_list) == 0:
             error_msg = f"Company non trovata: {partita_iva_company}"
@@ -177,7 +187,10 @@ def supplier_invoice():
             frappe.log_error(f"Company trovata: {company.name}", "Supplier Invoice Log")
 
         uuid = search_value_in_json(data, "invoice.uuid")
-        frappe.log_error(f"UUID estratto: {uuid}", "Supplier Invoice Log")
+        if uuid:
+            frappe.log_error(f"UUID estratto: {uuid}", "Supplier Invoice Log")
+        else:
+            frappe.log_error("UUID non trovato", "Supplier Invoice Log")
 
         frappe.log_error("Creazione documento fattura fornitore", "Supplier Invoice Log")
         fattura_fornitore = frappe.new_doc("Fattura Fornitori SDI")
