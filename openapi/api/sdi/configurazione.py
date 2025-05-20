@@ -106,7 +106,9 @@ def send_configuration(data):
         frappe.log_error(f"Company recuperata: {company.name}", "SDI Configuration Log")
         
         configuration = prepare_configuration(company)
-        frappe.log_error(f"Configurazione preparata: {configuration}", "SDI Configuration Log")
+        frappe.log_error("Configurazione preparata", "SDI Configuration Log")
+        frappe.log_error(f"Fiscal ID: {configuration.get('fiscal_id')}", "SDI Configuration Log")
+        frappe.log_error(f"Numero di callbacks configurati: {len(configuration.get('callbacks', []))}", "SDI Configuration Log")
         
         url = get_service("SDI", "api_configurations")
         frappe.log_error(f"URL servizio: {url}", "SDI Configuration Log")
@@ -116,19 +118,23 @@ def send_configuration(data):
             "Content-Type": "application/json",
         }
         
-        frappe.log_error(f"Headers impostati: {headers}", "SDI Configuration Log")
+        # Non loggiamo gli headers completi per evitare di esporre token nei log
+        frappe.log_error("Headers impostati correttamente", "SDI Configuration Log")
         frappe.log_error(f"Invio richiesta POST a {url}", "SDI Configuration Log")
         
         response = requests.post(url, headers=headers, json=configuration)
         
         frappe.log_error(f"Risposta ricevuta con status code: {response.status_code}", "SDI Configuration Log")
-        frappe.log_error(f"Contenuto risposta: {response.content}", "SDI Configuration Log")
+        # Limita il log del contenuto della risposta
+        content_preview = str(response.content)[:100] + "..." if len(str(response.content)) > 100 else str(response.content)
+        frappe.log_error(f"Preview risposta: {content_preview}", "SDI Configuration Log")
 
         # Verifica se la richiesta è andata a buon fine
         if response.status_code == 200:
             try:
                 json_response = response.json()
-                frappe.log_error(f"Risposta JSON: {json_response}", "SDI Configuration Log")
+                # Log limitato della risposta JSON
+                frappe.log_error("Risposta JSON ricevuta correttamente", "SDI Configuration Log")
                 return json_response["data"]
             except ValueError as e:
                 error_msg = f"Errore nel parsing JSON della risposta: {str(e)}"
@@ -136,7 +142,9 @@ def send_configuration(data):
                 frappe.throw(error_msg)
             except KeyError as e:
                 error_msg = f"Chiave 'data' non trovata nella risposta JSON: {str(e)}"
-                frappe.log_error(f"{error_msg}\nContenuto risposta JSON: {response.json()}", "SDI Configuration Error")
+                # Limitiamo il log della risposta JSON per evitare troncamenti
+                json_preview = str(response.json())[:100] + "..." if len(str(response.json())) > 100 else str(response.json())
+                frappe.log_error(f"{error_msg}\nPreview risposta JSON: {json_preview}", "SDI Configuration Error")
                 frappe.throw(error_msg)
         else:
             try:
@@ -149,7 +157,8 @@ def send_configuration(data):
                 message = f"Risposta non in formato JSON: {response.content}"
             
             error_msg = f"Errore nella richiesta: {message}"
-            frappe.log_error(f"{error_msg}\nStatus Code: {response.status_code}\nContenuto risposta: {response.content}", "SDI Configuration Error")
+            content_preview = str(response.content)[:100] + "..." if len(str(response.content)) > 100 else str(response.content)
+            frappe.log_error(f"{error_msg}\nStatus Code: {response.status_code}\nPreview risposta: {content_preview}", "SDI Configuration Error")
             frappe.throw(error_msg)
     except Exception as e:
         error_details = f"Errore imprevisto in send_configuration: {str(e)}\n{frappe.get_traceback()}"
