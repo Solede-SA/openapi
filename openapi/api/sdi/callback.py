@@ -4,8 +4,24 @@ from dateutil.parser import parse
 from datetime import datetime
 import pytz
 import pprint
+import logging
 
-import json
+# Configurazione logger
+logger = logging.getLogger("openapi.sdi")
+logger.setLevel(logging.INFO)
+
+# Configurazione dell'handler per scrivere su file
+import os
+log_file = os.path.join(frappe.utils.get_bench_path(), "logs", "openapi_sdi.log")
+file_handler = logging.FileHandler(log_file)
+file_handler.setLevel(logging.INFO)
+
+# Formato del log
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+# Aggiungiamo l'handler al logger
+logger.addHandler(file_handler)
 
 
 def search_value_in_json(data, target_key):
@@ -132,67 +148,67 @@ def save_notifica(data_ok):
 @frappe.whitelist(allow_guest=True)
 def supplier_invoice():
     try:
-        # Log l'inizio del processo
-        frappe.log_error("Inizio elaborazione fattura fornitore", "Supplier Invoice Log")
+        # Utilizziamo il logger standard invece di log_error
+        logger.info("Inizio elaborazione fattura fornitore")
         
         # Log limitato dei dati ricevuti
         data_preview = str(frappe.request.data)[:100] + "..." if len(str(frappe.request.data)) > 100 else str(frappe.request.data)
-        frappe.log_error(f"Preview dati ricevuti: {data_preview}", "Supplier Invoice Log")
+        logger.info(f"Preview dati ricevuti: {data_preview}")
         
         data = json.loads(frappe.request.data)
-        
-        # Log dopo il parsing JSON
-        frappe.log_error("Parsing JSON completato", "Supplier Invoice Log")
+        logger.info("Parsing JSON completato")
         
         partita_iva_company = search_value_in_json(
             data,
             "cessionario_committente.dati_anagrafici.id_fiscale_iva.id_codice",
         )
         if partita_iva_company:
-            frappe.log_error(f"Partita IVA azienda estratta: {partita_iva_company}", "Supplier Invoice Log")
+            logger.info(f"Partita IVA azienda estratta: {partita_iva_company}")
         else:
-            frappe.log_error("Partita IVA azienda non trovata", "Supplier Invoice Log")
+            logger.warning("Partita IVA azienda non trovata")
 
         partita_iva_fornitore = search_value_in_json(
             data,
             "cedente_prestatore.dati_anagrafici.id_fiscale_iva.id_codice",
         )
         if partita_iva_fornitore:
-            frappe.log_error(f"Partita IVA fornitore estratta: {partita_iva_fornitore}", "Supplier Invoice Log")
+            logger.info(f"Partita IVA fornitore estratta: {partita_iva_fornitore}")
         else:
-            frappe.log_error("Partita IVA fornitore non trovata", "Supplier Invoice Log")
+            logger.warning("Partita IVA fornitore non trovata")
 
         denominazione_fornitore = search_value_in_json(
             data,
             "cedente_prestatore.dati_anagrafici.anagrafica.denominazione",
         )
         if denominazione_fornitore:
-            frappe.log_error(f"Denominazione fornitore estratta: {denominazione_fornitore}", "Supplier Invoice Log")
+            logger.info(f"Denominazione fornitore estratta: {denominazione_fornitore}")
         else:
-            frappe.log_error("Denominazione fornitore non trovata", "Supplier Invoice Log")
+            logger.warning("Denominazione fornitore non trovata")
 
         print(f"partita_iva_fornitore: {partita_iva_fornitore}")
         print(f"denominazione_fornitore: {denominazione_fornitore}")
 
-        frappe.log_error("Ricerca company iniziata", "Supplier Invoice Log")
+        logger.info("Ricerca company iniziata")
         company_list = frappe.get_list("Company", filters={"tax_id": partita_iva_company})
-        frappe.log_error(f"Trovate {len(company_list)} company", "Supplier Invoice Log")
+        logger.info(f"Trovate {len(company_list)} company")
         
         if len(company_list) == 0:
             error_msg = f"Company non trovata: {partita_iva_company}"
+            logger.error(error_msg)
+            # Qui possiamo usare log_error per rendere visibile nell'interfaccia utente
             frappe.log_error(error_msg, "Supplier Invoice Error")
             frappe.throw(error_msg)
         else:
             company = frappe.get_doc("Company", company_list[0]["name"])
-            frappe.log_error(f"Company trovata: {company.name}", "Supplier Invoice Log")
+            logger.info(f"Company trovata: {company.name}")
 
         uuid = search_value_in_json(data, "invoice.uuid")
         if uuid:
-            frappe.log_error(f"UUID estratto: {uuid}", "Supplier Invoice Log")
+            logger.info(f"UUID estratto: {uuid}")
         else:
-            frappe.log_error("UUID non trovato", "Supplier Invoice Log")
+            logger.warning("UUID non trovato")
 
-        frappe.log_error("Creazione documento fattura fornitore", "Supplier Invoice Log")
+        logger.info("Creazione documento fattura fornitore")
         fattura_fornitore = frappe.new_doc("Fattura Fornitori SDI")
         fattura_fornitore.dati_fattura = json.dumps(data, indent=2)
         fattura_fornitore.uuid = uuid
@@ -201,13 +217,15 @@ def supplier_invoice():
         fattura_fornitore.denominazione_fornitore = denominazione_fornitore
         fattura_fornitore.via_webhook = 1
 
-        frappe.log_error("Inserimento fattura fornitore", "Supplier Invoice Log")
+        logger.info("Inserimento fattura fornitore")
         fattura_fornitore.insert()
-        frappe.log_error(f"Fattura fornitore inserita con successo: {fattura_fornitore.name}", "Supplier Invoice Log")
+        logger.info(f"Fattura fornitore inserita con successo: {fattura_fornitore.name}")
         
         return "OK from supplier_invoice"
     except Exception as e:
         error_details = f"Errore durante l'elaborazione della fattura fornitore: {str(e)}\n{frappe.get_traceback()}"
+        logger.exception(error_details)
+        # Registriamo l'errore anche nel log di Frappe per maggiore visibilità
         frappe.log_error(error_details, "Supplier Invoice Error")
         # Rilancia l'eccezione per restituire l'errore HTTP
         raise
