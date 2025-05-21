@@ -216,6 +216,9 @@ def supplier_invoice():
         fattura_fornitore.partita_iva_fornitore = partita_iva_fornitore
         fattura_fornitore.denominazione_fornitore = denominazione_fornitore
         fattura_fornitore.via_webhook = 1
+        
+        # Imposta il flag per ignorare la validazione anche in produzione
+        fattura_fornitore.flags.ignore_validate = True
 
         logger.info("Inserimento fattura fornitore")
         fattura_fornitore.insert()
