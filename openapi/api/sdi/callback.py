@@ -147,90 +147,26 @@ def save_notifica(data_ok):
 
 @frappe.whitelist(allow_guest=True)
 def supplier_invoice():
+    """
+    Wrapper per retrocompatibilità - delega al provider SDI
+    Mantiene allow_guest=True per compatibilità
+    """
     try:
-        # Utilizziamo il logger standard invece di log_error
-        logger.info("Inizio elaborazione fattura fornitore")
-        
-        # Log limitato dei dati ricevuti
-        data_preview = str(frappe.request.data)[:100] + "..." if len(str(frappe.request.data)) > 100 else str(frappe.request.data)
-        logger.info(f"Preview dati ricevuti: {data_preview}")
-        
+        import italian_invoice.utilities.fatture as fatture
         data = json.loads(frappe.request.data)
-        logger.info("Parsing JSON completato")
-        
-        partita_iva_company = search_value_in_json(
-            data,
-            "cessionario_committente.dati_anagrafici.id_fiscale_iva.id_codice",
-        )
-        if partita_iva_company:
-            logger.info(f"Partita IVA azienda estratta: {partita_iva_company}")
+
+        # Delega al router centrale
+        result = fatture.handle_sdi_webhook("supplier_invoice", data)
+
+        # Ritorna formato compatibile
+        if result.get("success"):
+            return "OK from supplier_invoice"
         else:
-            logger.warning("Partita IVA azienda non trovata")
+            frappe.throw(result.get("message", "Errore elaborazione"))
 
-        partita_iva_fornitore = search_value_in_json(
-            data,
-            "cedente_prestatore.dati_anagrafici.id_fiscale_iva.id_codice",
-        )
-        if partita_iva_fornitore:
-            logger.info(f"Partita IVA fornitore estratta: {partita_iva_fornitore}")
-        else:
-            logger.warning("Partita IVA fornitore non trovata")
-
-        denominazione_fornitore = search_value_in_json(
-            data,
-            "cedente_prestatore.dati_anagrafici.anagrafica.denominazione",
-        )
-        if denominazione_fornitore:
-            logger.info(f"Denominazione fornitore estratta: {denominazione_fornitore}")
-        else:
-            logger.warning("Denominazione fornitore non trovata")
-
-        print(f"partita_iva_fornitore: {partita_iva_fornitore}")
-        print(f"denominazione_fornitore: {denominazione_fornitore}")
-
-        logger.info("Ricerca company iniziata")
-        company_list = frappe.get_list("Company", filters={"tax_id": partita_iva_company})
-        logger.info(f"Trovate {len(company_list)} company")
-        
-        if len(company_list) == 0:
-            error_msg = f"Company non trovata: {partita_iva_company}"
-            logger.error(error_msg)
-            # Qui possiamo usare log_error per rendere visibile nell'interfaccia utente
-            frappe.log_error(error_msg, "Supplier Invoice Error")
-            frappe.throw(error_msg)
-        else:
-            company = frappe.get_doc("Company", company_list[0]["name"])
-            logger.info(f"Company trovata: {company.name}")
-
-        uuid = search_value_in_json(data, "invoice.uuid")
-        if uuid:
-            logger.info(f"UUID estratto: {uuid}")
-        else:
-            logger.warning("UUID non trovato")
-
-        logger.info("Creazione documento fattura fornitore")
-        fattura_fornitore = frappe.new_doc("Fattura Fornitori SDI")
-        fattura_fornitore.dati_fattura = json.dumps(data, indent=2)
-        fattura_fornitore.uuid = uuid
-        fattura_fornitore.company = company
-        fattura_fornitore.partita_iva_fornitore = partita_iva_fornitore
-        fattura_fornitore.denominazione_fornitore = denominazione_fornitore
-        fattura_fornitore.via_webhook = 1
-        
-        # Imposta il flag per ignorare la validazione anche in produzione
-        fattura_fornitore.flags.ignore_validate = True
-
-        logger.info("Inserimento fattura fornitore")
-        fattura_fornitore.insert()
-        logger.info(f"Fattura fornitore inserita con successo: {fattura_fornitore.name}")
-        
-        return "OK from supplier_invoice"
     except Exception as e:
-        error_details = f"Errore durante l'elaborazione della fattura fornitore: {str(e)}\n{frappe.get_traceback()}"
-        logger.exception(error_details)
-        # Registriamo l'errore anche nel log di Frappe per maggiore visibilità
-        frappe.log_error(error_details, "Supplier Invoice Error")
-        # Rilancia l'eccezione per restituire l'errore HTTP
+        logger.exception(f"Errore supplier_invoice: {str(e)}")
+        frappe.log_error(str(e), "Supplier Invoice Error")
         raise
 
 
@@ -256,10 +192,25 @@ def invoice_status_invoice_error():
 
 @frappe.whitelist(allow_guest=False)
 def customer_notification():
-    data_ok = get_data_ok(frappe.request.data)
-    save_notifica(data_ok)
+    """
+    Wrapper per retrocompatibilità - delega al provider SDI
+    """
+    try:
+        import italian_invoice.utilities.fatture as fatture
+        data = json.loads(frappe.request.data)
 
-    return "OK from customer_notification"
+        # Delega al router centrale
+        result = fatture.handle_sdi_webhook("customer_notification", data)
+
+        # Ritorna formato compatibile
+        if result.get("success"):
+            return "OK from customer_notification"
+        else:
+            frappe.throw(result.get("message", "Errore elaborazione"))
+
+    except Exception as e:
+        logger.exception(f"Errore customer_notification: {str(e)}")
+        raise
 
 
 @frappe.whitelist(allow_guest=False)
@@ -270,7 +221,22 @@ def legal_storage_missing_vat():
 
 @frappe.whitelist(allow_guest=False)
 def legal_storage_receipt():
-    # Skip saving notification for legal-storage-receipt events
-    # data_ok = get_data_ok(frappe.request.data)
-    # save_notifica(data_ok)
-    return "OK from legal_storage_receipt"
+    """
+    Wrapper per retrocompatibilità - delega al provider SDI
+    """
+    try:
+        import italian_invoice.utilities.fatture as fatture
+        data = json.loads(frappe.request.data)
+
+        # Delega al router centrale
+        result = fatture.handle_sdi_webhook("legal_storage_receipt", data)
+
+        # Ritorna formato compatibile
+        if result.get("success"):
+            return "OK from legal_storage_receipt"
+        else:
+            frappe.throw(result.get("message", "Errore elaborazione"))
+
+    except Exception as e:
+        logger.exception(f"Errore legal_storage_receipt: {str(e)}")
+        raise
