@@ -299,6 +299,16 @@ def verify_existing_customer(customer_name):
                 "label": "Codice Univoco SDI"
             })
 
+    # Verifica PEC se presente
+    if openapi_data.get("pec") and hasattr(customer, 'custom_pec'):
+        if openapi_data["pec"] != customer.custom_pec:
+            differences.append({
+                "field": "custom_pec",
+                "current": customer.custom_pec or "",
+                "openapi": openapi_data["pec"],
+                "label": "PEC"
+            })
+
     return {
         "openapi_data": openapi_data,
         "differences": differences,
@@ -332,6 +342,13 @@ def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
         print(f"SDI Code trovato: {data['sdiCode']}")
     else:
         print(f"SDI Code NON trovato nei dati")
+
+    # Aggiungi PEC se presente
+    if data.get("pec"):
+        customer_data["custom_pec"] = data["pec"]
+        print(f"PEC trovata: {data['pec']}")
+    else:
+        print(f"PEC NON trovata nei dati")
 
     # Prepara dati indirizzo se disponibili
     address_data = None

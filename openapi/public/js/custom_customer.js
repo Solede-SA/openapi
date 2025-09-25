@@ -422,6 +422,18 @@ function populate_customer_form_from_search(frm, company_data) {
         console.log('⚠️ SDI Code non presente nei dati della ricerca');
     }
 
+    // IMPOSTA LA PEC DALLA RICERCA
+    if (company_data.pec) {
+        console.log('Impostando custom_pec:', company_data.pec);
+        frm.set_value('custom_pec', company_data.pec);
+        frappe.show_alert({
+            message: `PEC impostata: ${company_data.pec}`,
+            indicator: 'green'
+        });
+    } else {
+        console.log('⚠️ PEC non presente nei dati della ricerca');
+    }
+
     // Gestisci stato azienda
     if (company_data.activityStatus === 'CESSATA') {
         frm.set_value('disabled', 1);
