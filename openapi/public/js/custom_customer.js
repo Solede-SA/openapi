@@ -404,8 +404,13 @@ function populate_customer_form_from_search(frm, company_data) {
     console.log('Impostando customer_name:', company_data.companyName);
     frm.set_value('customer_name', company_data.companyName || '');
 
-    console.log('Impostando tax_id:', company_data.vatCode || company_data.taxCode);
-    frm.set_value('tax_id', company_data.vatCode || company_data.taxCode || '');
+    const vat_code = company_data.vatCode || company_data.taxCode || '';
+    console.log('Impostando tax_id:', vat_code);
+    frm.set_value('tax_id', vat_code);
+
+    // Per le aziende, fiscal_code è uguale a tax_id
+    console.log('Impostando fiscal_code:', vat_code);
+    frm.set_value('fiscal_code', vat_code);
 
     console.log('Impostando customer_type: Company');
     frm.set_value('customer_type', 'Company');
@@ -424,8 +429,8 @@ function populate_customer_form_from_search(frm, company_data) {
 
     // IMPOSTA LA PEC DALLA RICERCA
     if (company_data.pec) {
-        console.log('Impostando custom_pec:', company_data.pec);
-        frm.set_value('custom_pec', company_data.pec);
+        console.log('Impostando pec:', company_data.pec);
+        frm.set_value('pec', company_data.pec);
         frappe.show_alert({
             message: `PEC impostata: ${company_data.pec}`,
             indicator: 'green'

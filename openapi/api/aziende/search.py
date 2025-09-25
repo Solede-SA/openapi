@@ -22,7 +22,7 @@ def search_company(data):
         "Content-Type": "application/json",
     }
 
-    queryFilter = "?dataEnrichment=name"
+    queryFilter = "?dataEnrichment=name,pec"
 
     if companyName:
         queryFilter += f"&companyName={companyName}"

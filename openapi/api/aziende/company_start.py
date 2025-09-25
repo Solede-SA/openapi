@@ -51,7 +51,7 @@ def search_companies(filters):
     # Parametri predefiniti
     params = {
         "limit": filters.get("limit", 10),
-        "dataEnrichment": filters.get("dataEnrichment", "start")
+        "dataEnrichment": filters.get("dataEnrichment", "advanced")
     }
 
     # Aggiungi solo i parametri forniti
@@ -96,7 +96,7 @@ def quick_search(search_text, search_type="companyName"):
     filters = {
         search_type: search_text,
         "limit": 10,
-        "dataEnrichment": "start"
+        "dataEnrichment": "advanced"
     }
     return search_companies(filters)
 
@@ -115,7 +115,7 @@ def get_company_start_data(vat_or_tax_code):
     if risultato_cache is not None:
         return risultato_cache
 
-    url = common_data.get_service("Company Start", f"IT-start/{vat_or_tax_code}")
+    url = common_data.get_service("Company Start", f"IT-advanced/{vat_or_tax_code}")
     company = get_company_doc()
 
     if not company.custom_open_api_token:
@@ -126,7 +126,7 @@ def get_company_start_data(vat_or_tax_code):
         "Content-Type": "application/json",
     }
 
-    print(f"\n=== CHIAMATA API IT-START ===")
+    print(f"\n=== CHIAMATA API IT-ADVANCED ===")
     print(f"URL: {url}")
     print(f"VAT/TAX CODE: {vat_or_tax_code}")
     print(f"HEADERS: {headers}")
@@ -138,25 +138,31 @@ def get_company_start_data(vat_or_tax_code):
 
         if response.status_code == 200:
             response_data = response.json()
-            print(f"IT-START RESPONSE BODY: {json.dumps(response_data, indent=2)}")
+            print(f"IT-ADVANCED RESPONSE BODY: {json.dumps(response_data, indent=2)}")
 
             # IT-start restituisce SEMPRE un array in "data" quando success=true
             if response_data.get("success") and response_data.get("data"):
                 if isinstance(response_data["data"], list) and len(response_data["data"]) > 0:
                     data = response_data["data"][0]
-                    print(f"IT-START: Array trovato in 'data', uso il primo elemento")
-                    print(f"DATA ESTRATTI DA IT-START: {json.dumps(data, indent=2)}")
+                    print(f"IT-ADVANCED: Array trovato in 'data', uso il primo elemento")
+                    print(f"DATA ESTRATTI DA IT-ADVANCED: {json.dumps(data, indent=2)}")
 
                     # Verifica presenza sdiCode
                     if data.get("sdiCode"):
-                        print(f"IT-START: sdiCode trovato: {data['sdiCode']}")
+                        print(f"IT-ADVANCED: sdiCode trovato: {data['sdiCode']}")
                     else:
-                        print(f"IT-START: sdiCode NON trovato nei dati")
+                        print(f"IT-ADVANCED: sdiCode NON trovato nei dati")
+
+                    # Verifica presenza PEC
+                    if data.get("pec"):
+                        print(f"IT-ADVANCED: PEC trovata: {data['pec']}")
+                    else:
+                        print(f"IT-ADVANCED: PEC NON trovata nei dati")
 
                     frappe.cache.set_value(chiave_cache, data, expires_in_sec=3600)
                     return data
                 else:
-                    print(f"IT-START: Nessun dato nell'array")
+                    print(f"IT-ADVANCED: Nessun dato nell'array")
                     return {"error": "Nessun dato trovato per questa P.IVA/CF"}
             else:
                 # Se success=false, restituisci l'errore
@@ -263,21 +269,35 @@ def verify_existing_customer(customer_name):
     differences = []
 
     # Confronta ragione sociale - IT-start usa "companyName"
-    if openapi_data.get("companyName") and openapi_data["companyName"] != customer.customer_name:
+    openapi_name = openapi_data.get("companyName") or ""
+    customer_name = customer.customer_name or ""
+    if openapi_name != customer_name and openapi_name:
         differences.append({
             "field": "customer_name",
-            "current": customer.customer_name,
-            "openapi": openapi_data["companyName"],
+            "current": customer_name,
+            "openapi": openapi_name,
             "label": "Ragione Sociale"
         })
 
     # Confronta partita IVA - IT-start usa "vatCode"
-    if openapi_data.get("vatCode") and openapi_data["vatCode"] != customer.tax_id:
+    openapi_vat = openapi_data.get("vatCode") or ""
+    customer_vat = customer.tax_id or ""
+    if openapi_vat != customer_vat and openapi_vat:
         differences.append({
             "field": "tax_id",
-            "current": customer.tax_id,
-            "openapi": openapi_data["vatCode"],
+            "current": customer_vat,
+            "openapi": openapi_vat,
             "label": "Partita IVA"
+        })
+
+    # Confronta codice fiscale - per le aziende è uguale alla partita IVA
+    customer_fiscal = customer.fiscal_code or ""
+    if openapi_vat != customer_fiscal and openapi_vat:
+        differences.append({
+            "field": "fiscal_code",
+            "current": customer_fiscal,
+            "openapi": openapi_vat,
+            "label": "Codice Fiscale"
         })
 
     # Verifica stato azienda - IT-start usa "activityStatus"
@@ -289,23 +309,27 @@ def verify_existing_customer(customer_name):
             "label": "Stato Azienda"
         })
 
-    # Verifica codice SDI se presente
-    if openapi_data.get("sdiCode") and hasattr(customer, 'custom_codice_univoco'):
-        if openapi_data["sdiCode"] != customer.custom_codice_univoco:
+    # Verifica codice SDI
+    if hasattr(customer, 'custom_codice_univoco'):
+        openapi_sdi = openapi_data.get("sdiCode") or ""
+        customer_sdi = customer.custom_codice_univoco or ""
+        if openapi_sdi != customer_sdi and openapi_sdi:
             differences.append({
                 "field": "custom_codice_univoco",
-                "current": customer.custom_codice_univoco or "",
-                "openapi": openapi_data["sdiCode"],
+                "current": customer_sdi,
+                "openapi": openapi_sdi,
                 "label": "Codice Univoco SDI"
             })
 
-    # Verifica PEC se presente
-    if openapi_data.get("pec") and hasattr(customer, 'custom_pec'):
-        if openapi_data["pec"] != customer.custom_pec:
+    # Verifica PEC
+    if hasattr(customer, 'pec'):
+        openapi_pec = openapi_data.get("pec") or ""
+        customer_pec = customer.pec or ""
+        if openapi_pec != customer_pec and openapi_pec:  # Solo se OpenAPI ha una PEC diversa
             differences.append({
-                "field": "custom_pec",
-                "current": customer.custom_pec or "",
-                "openapi": openapi_data["pec"],
+                "field": "pec",
+                "current": customer_pec,
+                "openapi": openapi_pec,
                 "label": "PEC"
             })
 
@@ -328,10 +352,12 @@ def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
         return data
 
     # Gestisci i diversi formati di risposta (IT-search vs IT-start/full)
+    vat_code = data.get("vatCode", data.get("vatNumber", data.get("taxCode", "")))
     customer_data = {
         "doctype": "Customer",
         "customer_name": data.get("companyName", data.get("name", "")),
-        "tax_id": data.get("vatCode", data.get("vatNumber", data.get("taxCode", ""))),
+        "tax_id": vat_code,
+        "fiscal_code": vat_code,  # Per le aziende, fiscal_code è uguale a tax_id
         "customer_type": "Company",
         "disabled": 1 if data.get("activityStatus") == "CESSATA" or data.get("status") == "CESSATA" else 0
     }
@@ -345,7 +371,7 @@ def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
 
     # Aggiungi PEC se presente
     if data.get("pec"):
-        customer_data["custom_pec"] = data["pec"]
+        customer_data["pec"] = data["pec"]
         print(f"PEC trovata: {data['pec']}")
     else:
         print(f"PEC NON trovata nei dati")
