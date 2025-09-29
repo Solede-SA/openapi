@@ -257,6 +257,7 @@ def get_company_full_data(vat_or_tax_code):
 def verify_existing_customer(customer_name):
     """Verifica e confronta dati di un cliente esistente con OpenAPI"""
     customer = frappe.get_doc("Customer", customer_name)
+    # customer_name qui è l'ID del documento (es. CUST-00001), non il nome della ragione sociale
 
     if not customer.tax_id:
         return {"error": "Il cliente non ha partita IVA/codice fiscale"}
@@ -335,19 +336,24 @@ def verify_existing_customer(customer_name):
 
     # Verifica indirizzo e provincia
     if openapi_data.get("address"):
-        # Recupera l'indirizzo principale del cliente
+        # Troviamo l'indirizzo principale tramite Dynamic Link
+        # Usa customer.name che è l'ID del documento Customer
         primary_address = frappe.db.get_value(
             "Dynamic Link",
             {
                 "link_doctype": "Customer",
-                "link_name": customer_name,
+                "link_name": customer.name,  # Usa l'ID del documento, non il parametro
                 "parenttype": "Address"
             },
             "parent"
         )
 
+        print(f"DEBUG: Looking for address linked to customer ID: {customer.name}")
+        print(f"DEBUG: Primary address found: {primary_address}")
+
         if primary_address:
             address_doc = frappe.get_doc("Address", primary_address)
+            print(f"DEBUG: Current province in address: '{address_doc.state}'")
 
             # Estrai la provincia da OpenAPI
             openapi_province = ""
@@ -356,21 +362,42 @@ def verify_existing_customer(customer_name):
             else:
                 openapi_province = openapi_data["address"].get("province", "")
 
+            print(f"DEBUG: OpenAPI province: '{openapi_province}'")
+
             # Confronta provincia
             current_province = address_doc.state or ""
-            if openapi_province and openapi_province != current_province:
-                # Aggiungi nota speciale se la provincia non è 2 lettere
-                note = ""
-                if len(openapi_province) != 2:
-                    note = " ⚠️ (Formato non standard - dovrebbe essere 2 lettere)"
 
-                differences.append({
-                    "field": "address_province",
-                    "current": current_province,
-                    "openapi": openapi_province + note,
-                    "label": "Provincia (Indirizzo)",
-                    "is_address_field": True
-                })
+            # Verifica se c'è una differenza O se il formato corrente non è standard
+            if openapi_province:
+                should_update = False
+                current_note = ""
+                openapi_note = ""
+
+                # Check se provincia corrente non è 2 lettere
+                if current_province and len(current_province) != 2:
+                    current_note = " ⚠️ (Formato non standard)"
+                    should_update = True  # Sempre suggerire aggiornamento se formato non standard
+                    print(f"DEBUG: Current province is not 2 letters: '{current_province}'")
+
+                # Check se provincia OpenAPI non è 2 lettere
+                if len(openapi_province) != 2:
+                    openapi_note = " ⚠️ (Formato non standard - dovrebbe essere 2 lettere)"
+                    print(f"DEBUG: OpenAPI province is not 2 letters: '{openapi_province}'")
+
+                # Check se sono diversi
+                if openapi_province != current_province:
+                    should_update = True
+                    print(f"DEBUG: Provinces are different: '{current_province}' != '{openapi_province}'")
+
+                if should_update:
+                    print(f"DEBUG: Adding province difference to list")
+                    differences.append({
+                        "field": "address_province",
+                        "current": current_province + current_note,
+                        "openapi": openapi_province + openapi_note,
+                        "label": "Provincia (Indirizzo)",
+                        "is_address_field": True
+                    })
 
     return {
         "openapi_data": openapi_data,
@@ -479,7 +506,11 @@ def update_customer_from_openapi(customer_name, fields_to_update):
             if primary_address:
                 address_doc = frappe.get_doc("Address", primary_address)
                 # Rimuovi eventuali note di warning dalla provincia
-                new_province = field["openapi"].replace(" ⚠️ (Formato non standard - dovrebbe essere 2 lettere)", "")
+                new_province = field["openapi"]
+                # Rimuovi tutti i possibili warning
+                new_province = new_province.replace(" ⚠️ (Formato non standard - dovrebbe essere 2 lettere)", "")
+                new_province = new_province.replace(" ⚠️ (Formato non standard)", "")
+
                 address_doc.state = new_province
                 address_doc.save()
                 address_updated = True
