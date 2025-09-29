@@ -333,6 +333,45 @@ def verify_existing_customer(customer_name):
                 "label": "PEC"
             })
 
+    # Verifica indirizzo e provincia
+    if openapi_data.get("address"):
+        # Recupera l'indirizzo principale del cliente
+        primary_address = frappe.db.get_value(
+            "Dynamic Link",
+            {
+                "link_doctype": "Customer",
+                "link_name": customer_name,
+                "parenttype": "Address"
+            },
+            "parent"
+        )
+
+        if primary_address:
+            address_doc = frappe.get_doc("Address", primary_address)
+
+            # Estrai la provincia da OpenAPI
+            openapi_province = ""
+            if isinstance(openapi_data["address"], dict) and openapi_data["address"].get("registeredOffice"):
+                openapi_province = openapi_data["address"]["registeredOffice"].get("province", "")
+            else:
+                openapi_province = openapi_data["address"].get("province", "")
+
+            # Confronta provincia
+            current_province = address_doc.state or ""
+            if openapi_province and openapi_province != current_province:
+                # Aggiungi nota speciale se la provincia non è 2 lettere
+                note = ""
+                if len(openapi_province) != 2:
+                    note = " ⚠️ (Formato non standard - dovrebbe essere 2 lettere)"
+
+                differences.append({
+                    "field": "address_province",
+                    "current": current_province,
+                    "openapi": openapi_province + note,
+                    "label": "Provincia (Indirizzo)",
+                    "is_address_field": True
+                })
+
     return {
         "openapi_data": openapi_data,
         "differences": differences,
@@ -421,9 +460,39 @@ def update_customer_from_openapi(customer_name, fields_to_update):
         fields_to_update = json.loads(fields_to_update)
 
     customer = frappe.get_doc("Customer", customer_name)
+    address_updated = False
 
     for field in fields_to_update:
-        if hasattr(customer, field["field"]):
+        # Gestisci campi speciali dell'indirizzo
+        if field["field"] == "address_province":
+            # Recupera l'indirizzo principale del cliente
+            primary_address = frappe.db.get_value(
+                "Dynamic Link",
+                {
+                    "link_doctype": "Customer",
+                    "link_name": customer_name,
+                    "parenttype": "Address"
+                },
+                "parent"
+            )
+
+            if primary_address:
+                address_doc = frappe.get_doc("Address", primary_address)
+                # Rimuovi eventuali note di warning dalla provincia
+                new_province = field["openapi"].replace(" ⚠️ (Formato non standard - dovrebbe essere 2 lettere)", "")
+                address_doc.state = new_province
+                address_doc.save()
+                address_updated = True
+
+                # Log warning se provincia non è 2 lettere
+                if len(new_province) != 2:
+                    frappe.log_error(
+                        f"Provincia aggiornata con formato non standard: '{new_province}' per cliente {customer_name}",
+                        "OpenAPI Province Update Warning"
+                    )
+
+        # Gestisci campi standard del cliente
+        elif hasattr(customer, field["field"]):
             if field["field"] == "disabled":
                 customer.disabled = 1 if field["openapi"] == "Cessata" else 0
             else:
@@ -431,4 +500,8 @@ def update_customer_from_openapi(customer_name, fields_to_update):
 
     customer.save()
 
-    return {"success": True, "message": f"Cliente {customer_name} aggiornato con successo"}
+    message = f"Cliente {customer_name} aggiornato con successo"
+    if address_updated:
+        message += " (incluso indirizzo)"
+
+    return {"success": True, "message": message}

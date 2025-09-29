@@ -626,15 +626,38 @@ frappe.ui.form.on('Customer', {
                 address.state = address.state.code || address.state.description || '';
             }
 
+            // Controlla se la provincia è di 2 lettere
+            let provinceWarning = null;
+            if (address.state && address.state.length !== 2) {
+                provinceWarning = `⚠️ Attenzione: La provincia "${address.state}" non è nel formato standard a 2 lettere. Questo potrebbe causare problemi con le fatture elettroniche.`;
+                console.warn(provinceWarning);
+            }
+
             frappe.call({
                 method: 'frappe.client.insert',
                 args: { doc: address },
                 callback: function(r) {
                     if (r.message) {
-                        frappe.show_alert({
-                            message: 'Indirizzo creato con successo',
-                            indicator: 'green'
-                        });
+                        // Mostra prima il warning se presente
+                        if (provinceWarning) {
+                            frappe.show_alert({
+                                message: provinceWarning,
+                                indicator: 'orange'
+                            }, 7); // Mostra per 7 secondi
+
+                            // Dopo 2 secondi mostra il messaggio di successo
+                            setTimeout(function() {
+                                frappe.show_alert({
+                                    message: 'Indirizzo creato (verificare il campo provincia)',
+                                    indicator: 'yellow'
+                                });
+                            }, 2000);
+                        } else {
+                            frappe.show_alert({
+                                message: 'Indirizzo creato con successo',
+                                indicator: 'green'
+                            });
+                        }
                         // Ricarica il form per vedere l'indirizzo collegato automaticamente dall'hook
                         frm.reload_doc();
                     }
