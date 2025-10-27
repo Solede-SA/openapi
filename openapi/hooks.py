@@ -3,7 +3,7 @@ app_title = "Openapi"
 app_publisher = "Solede SA"
 app_description = "Gestione OpenApi"
 app_email = "info@solede.com"
-app_license = "mit"
+app_license = "AGPLv3"
 # required_apps = []
 
 # Includes in <head>
