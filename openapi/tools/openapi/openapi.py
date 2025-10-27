@@ -1,5 +1,3 @@
-import frappe
-import requests
 import json
 import openapi.api.aziende.search as search
 

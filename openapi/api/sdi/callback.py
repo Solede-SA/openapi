@@ -1,23 +1,22 @@
-import frappe
 import json
-from dateutil.parser import parse
-from datetime import datetime
-import pytz
-import pprint
 import logging
+import os
+
+import frappe
+import pytz
+from dateutil.parser import parse
 
 # Configurazione logger
 logger = logging.getLogger("openapi.sdi")
 logger.setLevel(logging.INFO)
 
 # Configurazione dell'handler per scrivere su file
-import os
 log_file = os.path.join(frappe.utils.get_bench_path(), "logs", "openapi_sdi.log")
 file_handler = logging.FileHandler(log_file)
 file_handler.setLevel(logging.INFO)
 
 # Formato del log
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(formatter)
 
 # Aggiungiamo l'handler al logger
@@ -86,7 +85,9 @@ def get_data_ok(request):
     elif event == "legal-storage-receipt":
         uuid = data["data"]["object_id"]
         # Use updated_at if receipt_received_at is not present
-        data_notifica = data["data"].get("receipt_received_at", data["data"]["updated_at"])
+        data_notifica = data["data"].get(
+            "receipt_received_at", data["data"]["updated_at"]
+        )
         stato = data["data"].get("status", "")
 
     lista_transazioni = frappe.get_list(
@@ -153,6 +154,7 @@ def supplier_invoice():
     """
     try:
         import italian_invoice.utilities.fatture as fatture
+
         data = json.loads(frappe.request.data)
 
         # Delega al router centrale
@@ -197,6 +199,7 @@ def customer_notification():
     """
     try:
         import italian_invoice.utilities.fatture as fatture
+
         data = json.loads(frappe.request.data)
 
         # Delega al router centrale
@@ -226,6 +229,7 @@ def legal_storage_receipt():
     """
     try:
         import italian_invoice.utilities.fatture as fatture
+
         data = json.loads(frappe.request.data)
 
         # Delega al router centrale

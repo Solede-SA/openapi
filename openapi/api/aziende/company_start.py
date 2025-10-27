@@ -2,7 +2,6 @@ import frappe
 import json
 import openapi.tools.common_data as common_data
 import requests
-from frappe import _
 
 
 def get_company_doc():
@@ -51,23 +50,43 @@ def search_companies(filters):
     # Parametri predefiniti
     params = {
         "limit": filters.get("limit", 10),
-        "dataEnrichment": filters.get("dataEnrichment", "advanced")
+        "dataEnrichment": filters.get("dataEnrichment", "advanced"),
     }
 
     # Aggiungi solo i parametri forniti
     optional_params = [
-        "companyName", "autocomplete", "vatCode", "taxCode", "province", "townCode", "atecoCode",
-        "cciaa", "reaCode", "minTurnover", "maxTurnover", "minEmployees",
-        "maxEmployees", "sdiCode", "legalFormCode", "shareHolderTaxCode",
-        "activityStatus", "pec", "lat", "long", "radius", "dryRun", "skip",
-        "creationTimestamp", "lastUpdateTimestamp"
+        "companyName",
+        "autocomplete",
+        "vatCode",
+        "taxCode",
+        "province",
+        "townCode",
+        "atecoCode",
+        "cciaa",
+        "reaCode",
+        "minTurnover",
+        "maxTurnover",
+        "minEmployees",
+        "maxEmployees",
+        "sdiCode",
+        "legalFormCode",
+        "shareHolderTaxCode",
+        "activityStatus",
+        "pec",
+        "lat",
+        "long",
+        "radius",
+        "dryRun",
+        "skip",
+        "creationTimestamp",
+        "lastUpdateTimestamp",
     ]
 
     for param in optional_params:
         if param in filters and filters[param]:
             params[param] = filters[param]
 
-    print(f"\n=== CHIAMATA API SEARCH ===")
+    print("\n=== CHIAMATA API SEARCH ===")
     print(f"URL: {url}")
     print(f"PARAMS: {params}")
     print(f"HEADERS: {headers}")
@@ -82,7 +101,10 @@ def search_companies(filters):
             print(f"RESPONSE BODY: {json.dumps(result, indent=2)}")
             return result
         else:
-            error_result = {"error": f"Errore API: {response.status_code}", "details": response.json()}
+            error_result = {
+                "error": f"Errore API: {response.status_code}",
+                "details": response.json(),
+            }
             print(f"ERROR RESPONSE: {json.dumps(error_result, indent=2)}")
             return error_result
     except Exception as e:
@@ -93,11 +115,7 @@ def search_companies(filters):
 @frappe.whitelist()
 def quick_search(search_text, search_type="companyName"):
     """Ricerca rapida per nome o autocompletamento"""
-    filters = {
-        search_type: search_text,
-        "limit": 10,
-        "dataEnrichment": "advanced"
-    }
+    filters = {search_type: search_text, "limit": 10, "dataEnrichment": "advanced"}
     return search_companies(filters)
 
 
@@ -126,7 +144,7 @@ def get_company_start_data(vat_or_tax_code):
         "Content-Type": "application/json",
     }
 
-    print(f"\n=== CHIAMATA API IT-ADVANCED ===")
+    print("\n=== CHIAMATA API IT-ADVANCED ===")
     print(f"URL: {url}")
     print(f"VAT/TAX CODE: {vat_or_tax_code}")
     print(f"HEADERS: {headers}")
@@ -142,31 +160,37 @@ def get_company_start_data(vat_or_tax_code):
 
             # IT-start restituisce SEMPRE un array in "data" quando success=true
             if response_data.get("success") and response_data.get("data"):
-                if isinstance(response_data["data"], list) and len(response_data["data"]) > 0:
+                if (
+                    isinstance(response_data["data"], list)
+                    and len(response_data["data"]) > 0
+                ):
                     data = response_data["data"][0]
-                    print(f"IT-ADVANCED: Array trovato in 'data', uso il primo elemento")
+                    print("IT-ADVANCED: Array trovato in 'data', uso il primo elemento")
                     print(f"DATA ESTRATTI DA IT-ADVANCED: {json.dumps(data, indent=2)}")
 
                     # Verifica presenza sdiCode
                     if data.get("sdiCode"):
                         print(f"IT-ADVANCED: sdiCode trovato: {data['sdiCode']}")
                     else:
-                        print(f"IT-ADVANCED: sdiCode NON trovato nei dati")
+                        print("IT-ADVANCED: sdiCode NON trovato nei dati")
 
                     # Verifica presenza PEC
                     if data.get("pec"):
                         print(f"IT-ADVANCED: PEC trovata: {data['pec']}")
                     else:
-                        print(f"IT-ADVANCED: PEC NON trovata nei dati")
+                        print("IT-ADVANCED: PEC NON trovata nei dati")
 
                     frappe.cache.set_value(chiave_cache, data, expires_in_sec=3600)
                     return data
                 else:
-                    print(f"IT-ADVANCED: Nessun dato nell'array")
+                    print("IT-ADVANCED: Nessun dato nell'array")
                     return {"error": "Nessun dato trovato per questa P.IVA/CF"}
             else:
                 # Se success=false, restituisci l'errore
-                return {"error": response_data.get("message", "Errore sconosciuto"), "details": response_data}
+                return {
+                    "error": response_data.get("message", "Errore sconosciuto"),
+                    "details": response_data,
+                }
         else:
             response_json = response.json()
 
@@ -175,14 +199,13 @@ def get_company_start_data(vat_or_tax_code):
                 error_message = response_json.get("message", "P.IVA/CF non valido")
                 error_data = {
                     "error": f"Partita IVA non valida: {error_message}",
-                    "details": response_json
+                    "details": response_json,
                 }
             else:
-                error_message = response_json.get("message", f"Errore API: {response.status_code}")
-                error_data = {
-                    "error": error_message,
-                    "details": response_json
-                }
+                error_message = response_json.get(
+                    "message", f"Errore API: {response.status_code}"
+                )
+                error_data = {"error": error_message, "details": response_json}
 
             print(f"ERROR RESPONSE: {json.dumps(error_data, indent=2)}")
             return error_data
@@ -216,7 +239,7 @@ def get_company_full_data(vat_or_tax_code):
         "Content-Type": "application/json",
     }
 
-    print(f"\n=== CHIAMATA API COMPANY FULL ===")
+    print("\n=== CHIAMATA API COMPANY FULL ===")
     print(f"URL: {url}")
     print(f"HEADERS: {headers}")
 
@@ -230,22 +253,33 @@ def get_company_full_data(vat_or_tax_code):
             print(f"RESPONSE BODY: {json.dumps(response_data, indent=2)}")
 
             # IT-full restituisce i dati dentro un oggetto "data"
-            if isinstance(response_data, dict) and "data" in response_data and response_data.get("success"):
+            if (
+                isinstance(response_data, dict)
+                and "data" in response_data
+                and response_data.get("success")
+            ):
                 data = response_data["data"]
                 # Normalizza i campi per compatibilità con IT-search/start
                 if "companyDetails" in data:
                     data["companyName"] = data["companyDetails"].get("companyName", "")
                     data["vatCode"] = data["companyDetails"].get("vatCode", "")
                     data["taxCode"] = data["companyDetails"].get("taxCode", "")
-                if "companyStatus" in data and data["companyStatus"].get("activityStatus"):
-                    data["activityStatus"] = data["companyStatus"]["activityStatus"].get("code", "")
+                if "companyStatus" in data and data["companyStatus"].get(
+                    "activityStatus"
+                ):
+                    data["activityStatus"] = data["companyStatus"][
+                        "activityStatus"
+                    ].get("code", "")
             else:
                 data = response_data
 
             frappe.cache.set_value(chiave_cache, data, expires_in_sec=3600)
             return data
         else:
-            error_data = {"error": f"Errore API: {response.status_code}", "details": response.json()}
+            error_data = {
+                "error": f"Errore API: {response.status_code}",
+                "details": response.json(),
+            }
             print(f"ERROR RESPONSE: {json.dumps(error_data, indent=2)}")
             return error_data
     except Exception as e:
@@ -273,66 +307,80 @@ def verify_existing_customer(customer_name):
     openapi_name = openapi_data.get("companyName") or ""
     customer_name = customer.customer_name or ""
     if openapi_name != customer_name and openapi_name:
-        differences.append({
-            "field": "customer_name",
-            "current": customer_name,
-            "openapi": openapi_name,
-            "label": "Ragione Sociale"
-        })
+        differences.append(
+            {
+                "field": "customer_name",
+                "current": customer_name,
+                "openapi": openapi_name,
+                "label": "Ragione Sociale",
+            }
+        )
 
     # Confronta partita IVA - IT-start usa "vatCode"
     openapi_vat = openapi_data.get("vatCode") or ""
     customer_vat = customer.tax_id or ""
     if openapi_vat != customer_vat and openapi_vat:
-        differences.append({
-            "field": "tax_id",
-            "current": customer_vat,
-            "openapi": openapi_vat,
-            "label": "Partita IVA"
-        })
+        differences.append(
+            {
+                "field": "tax_id",
+                "current": customer_vat,
+                "openapi": openapi_vat,
+                "label": "Partita IVA",
+            }
+        )
 
     # Confronta codice fiscale - per le aziende è uguale alla partita IVA
     customer_fiscal = customer.fiscal_code or ""
     if openapi_vat != customer_fiscal and openapi_vat:
-        differences.append({
-            "field": "fiscal_code",
-            "current": customer_fiscal,
-            "openapi": openapi_vat,
-            "label": "Codice Fiscale"
-        })
+        differences.append(
+            {
+                "field": "fiscal_code",
+                "current": customer_fiscal,
+                "openapi": openapi_vat,
+                "label": "Codice Fiscale",
+            }
+        )
 
     # Verifica stato azienda - IT-start usa "activityStatus"
     if openapi_data.get("activityStatus") == "CESSATA" and not customer.disabled:
-        differences.append({
-            "field": "disabled",
-            "current": "Attivo",
-            "openapi": "Cessata",
-            "label": "Stato Azienda"
-        })
+        differences.append(
+            {
+                "field": "disabled",
+                "current": "Attivo",
+                "openapi": "Cessata",
+                "label": "Stato Azienda",
+            }
+        )
 
     # Verifica codice SDI
-    if hasattr(customer, 'custom_codice_univoco'):
+    if hasattr(customer, "custom_codice_univoco"):
         openapi_sdi = openapi_data.get("sdiCode") or ""
         customer_sdi = customer.custom_codice_univoco or ""
         if openapi_sdi != customer_sdi and openapi_sdi:
-            differences.append({
-                "field": "custom_codice_univoco",
-                "current": customer_sdi,
-                "openapi": openapi_sdi,
-                "label": "Codice Univoco SDI"
-            })
+            differences.append(
+                {
+                    "field": "custom_codice_univoco",
+                    "current": customer_sdi,
+                    "openapi": openapi_sdi,
+                    "label": "Codice Univoco SDI",
+                }
+            )
 
     # Verifica PEC
-    if hasattr(customer, 'pec'):
+    if hasattr(customer, "pec"):
         openapi_pec = openapi_data.get("pec") or ""
         customer_pec = customer.pec or ""
-        if openapi_pec != customer_pec and openapi_pec:  # Solo se OpenAPI ha una PEC diversa
-            differences.append({
-                "field": "pec",
-                "current": customer_pec,
-                "openapi": openapi_pec,
-                "label": "PEC"
-            })
+        if (
+            openapi_pec != customer_pec and openapi_pec
+        ):  # Solo se OpenAPI ha una PEC diversa
+            differences.append(
+                {
+                    "field": "pec",
+                    "current": customer_pec,
+                    "openapi": openapi_pec,
+                    "label": "PEC",
+                }
+            )
 
     # Verifica indirizzo e provincia
     if openapi_data.get("address"):
@@ -343,9 +391,9 @@ def verify_existing_customer(customer_name):
             {
                 "link_doctype": "Customer",
                 "link_name": customer.name,  # Usa l'ID del documento, non il parametro
-                "parenttype": "Address"
+                "parenttype": "Address",
             },
-            "parent"
+            "parent",
         )
 
         print(f"DEBUG: Looking for address linked to customer ID: {customer.name}")
@@ -357,8 +405,12 @@ def verify_existing_customer(customer_name):
 
             # Estrai la provincia da OpenAPI
             openapi_province = ""
-            if isinstance(openapi_data["address"], dict) and openapi_data["address"].get("registeredOffice"):
-                openapi_province = openapi_data["address"]["registeredOffice"].get("province", "")
+            if isinstance(openapi_data["address"], dict) and openapi_data[
+                "address"
+            ].get("registeredOffice"):
+                openapi_province = openapi_data["address"]["registeredOffice"].get(
+                    "province", ""
+                )
             else:
                 openapi_province = openapi_data["address"].get("province", "")
 
@@ -376,33 +428,45 @@ def verify_existing_customer(customer_name):
                 # Check se provincia corrente non è 2 lettere
                 if current_province and len(current_province) != 2:
                     current_note = " ⚠️ (Formato non standard)"
-                    should_update = True  # Sempre suggerire aggiornamento se formato non standard
-                    print(f"DEBUG: Current province is not 2 letters: '{current_province}'")
+                    should_update = (
+                        True  # Sempre suggerire aggiornamento se formato non standard
+                    )
+                    print(
+                        f"DEBUG: Current province is not 2 letters: '{current_province}'"
+                    )
 
                 # Check se provincia OpenAPI non è 2 lettere
                 if len(openapi_province) != 2:
-                    openapi_note = " ⚠️ (Formato non standard - dovrebbe essere 2 lettere)"
-                    print(f"DEBUG: OpenAPI province is not 2 letters: '{openapi_province}'")
+                    openapi_note = (
+                        " ⚠️ (Formato non standard - dovrebbe essere 2 lettere)"
+                    )
+                    print(
+                        f"DEBUG: OpenAPI province is not 2 letters: '{openapi_province}'"
+                    )
 
                 # Check se sono diversi
                 if openapi_province != current_province:
                     should_update = True
-                    print(f"DEBUG: Provinces are different: '{current_province}' != '{openapi_province}'")
+                    print(
+                        f"DEBUG: Provinces are different: '{current_province}' != '{openapi_province}'"
+                    )
 
                 if should_update:
-                    print(f"DEBUG: Adding province difference to list")
-                    differences.append({
-                        "field": "address_province",
-                        "current": current_province + current_note,
-                        "openapi": openapi_province + openapi_note,
-                        "label": "Provincia (Indirizzo)",
-                        "is_address_field": True
-                    })
+                    print("DEBUG: Adding province difference to list")
+                    differences.append(
+                        {
+                            "field": "address_province",
+                            "current": current_province + current_note,
+                            "openapi": openapi_province + openapi_note,
+                            "label": "Provincia (Indirizzo)",
+                            "is_address_field": True,
+                        }
+                    )
 
     return {
         "openapi_data": openapi_data,
         "differences": differences,
-        "has_differences": len(differences) > 0
+        "has_differences": len(differences) > 0,
     }
 
 
@@ -425,7 +489,9 @@ def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
         "tax_id": vat_code,
         "fiscal_code": vat_code,  # Per le aziende, fiscal_code è uguale a tax_id
         "customer_type": "Company",
-        "disabled": 1 if data.get("activityStatus") == "CESSATA" or data.get("status") == "CESSATA" else 0
+        "disabled": 1
+        if data.get("activityStatus") == "CESSATA" or data.get("status") == "CESSATA"
+        else 0,
     }
 
     # Aggiungi codice SDI se presente
@@ -433,20 +499,22 @@ def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
         customer_data["custom_codice_univoco"] = data["sdiCode"]
         print(f"SDI Code trovato: {data['sdiCode']}")
     else:
-        print(f"SDI Code NON trovato nei dati")
+        print("SDI Code NON trovato nei dati")
 
     # Aggiungi PEC se presente
     if data.get("pec"):
         customer_data["pec"] = data["pec"]
         print(f"PEC trovata: {data['pec']}")
     else:
-        print(f"PEC NON trovata nei dati")
+        print("PEC NON trovata nei dati")
 
     # Prepara dati indirizzo se disponibili
     address_data = None
     if data.get("address"):
         # Verifica se è formato IT-search (con registeredOffice) o IT-start/full
-        if isinstance(data["address"], dict) and data["address"].get("registeredOffice"):
+        if isinstance(data["address"], dict) and data["address"].get(
+            "registeredOffice"
+        ):
             addr = data["address"]["registeredOffice"]
             address_data = {
                 "address_line1": addr.get("streetName", addr.get("street", "")),
@@ -456,7 +524,7 @@ def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
                 "country": "Italy",
                 "address_type": "Billing",
                 "is_primary_address": 1,
-                "is_shipping_address": 0
+                "is_shipping_address": 0,
             }
         else:
             # Formato IT-start/full
@@ -468,7 +536,7 @@ def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
                 "country": "Italy",
                 "address_type": "Billing",
                 "is_primary_address": 1,
-                "is_shipping_address": 0
+                "is_shipping_address": 0,
             }
 
     print(f"CUSTOMER_DATA FINALE: {json.dumps(customer_data, indent=2)}")
@@ -476,7 +544,7 @@ def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
     return {
         "customer_data": customer_data,
         "address_data": address_data,
-        "source_data": data
+        "source_data": data,
     }
 
 
@@ -498,9 +566,9 @@ def update_customer_from_openapi(customer_name, fields_to_update):
                 {
                     "link_doctype": "Customer",
                     "link_name": customer_name,
-                    "parenttype": "Address"
+                    "parenttype": "Address",
                 },
-                "parent"
+                "parent",
             )
 
             if primary_address:
@@ -508,7 +576,9 @@ def update_customer_from_openapi(customer_name, fields_to_update):
                 # Rimuovi eventuali note di warning dalla provincia
                 new_province = field["openapi"]
                 # Rimuovi tutti i possibili warning
-                new_province = new_province.replace(" ⚠️ (Formato non standard - dovrebbe essere 2 lettere)", "")
+                new_province = new_province.replace(
+                    " ⚠️ (Formato non standard - dovrebbe essere 2 lettere)", ""
+                )
                 new_province = new_province.replace(" ⚠️ (Formato non standard)", "")
 
                 address_doc.state = new_province
@@ -519,7 +589,7 @@ def update_customer_from_openapi(customer_name, fields_to_update):
                 if len(new_province) != 2:
                     frappe.log_error(
                         f"Provincia aggiornata con formato non standard: '{new_province}' per cliente {customer_name}",
-                        "OpenAPI Province Update Warning"
+                        "OpenAPI Province Update Warning",
                     )
 
         # Gestisci campi standard del cliente

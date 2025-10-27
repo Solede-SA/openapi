@@ -18,7 +18,9 @@ def get_or_create_supplier(supplier_vat_id, fattura_fornitori_sdi):
     """
     try:
         # Se viene passato il documento SDI, recupera i dati
-        if fattura_fornitori_sdi and frappe.db.exists("Fattura Fornitori SDI", fattura_fornitori_sdi):
+        if fattura_fornitori_sdi and frappe.db.exists(
+            "Fattura Fornitori SDI", fattura_fornitori_sdi
+        ):
             sdi_doc = frappe.get_doc("Fattura Fornitori SDI", fattura_fornitori_sdi)
             invoice_data = json.loads(sdi_doc.dati_fattura)
         else:
@@ -43,9 +45,7 @@ def process_supplier_invoice(
     try:
         # Delega completamente a italian_invoice
         return fatture_passive.process_supplier_invoice(
-            json_data_string,
-            fattura_fornitori_sdi,
-            item_mappings
+            json_data_string, fattura_fornitori_sdi, item_mappings
         )
 
     except Exception as e:
@@ -55,6 +55,7 @@ def process_supplier_invoice(
 
 # Wrapper per funzioni helper - manteniamo per retrocompatibilità
 # Nel caso qualche codice custom le chiami direttamente
+
 
 def create_supplier(supplier_data, company):
     """Wrapper per retrocompatibilità - usa italian_invoice"""

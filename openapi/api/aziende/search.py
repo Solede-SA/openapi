@@ -1,8 +1,8 @@
 import frappe
-import json
-import openapi.tools.common_data as common_data
 import requests
-from frappe.utils.caching import redis_cache
+from bs4 import BeautifulSoup
+
+import openapi.tools.common_data as common_data
 
 
 def get_company_doc():
@@ -112,10 +112,6 @@ def get_full(data):
     except Exception as e:
         print(e)
         return e
-
-
-import requests
-from bs4 import BeautifulSoup
 
 
 @frappe.whitelist()

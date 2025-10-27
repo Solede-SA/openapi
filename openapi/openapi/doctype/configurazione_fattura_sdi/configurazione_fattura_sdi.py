@@ -6,6 +6,5 @@ from frappe.model.document import Document
 
 
 class ConfigurazioneFatturaSDI(Document):
-
     def before_save(self, parent):
         print(parent)
