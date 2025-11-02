@@ -21,8 +21,8 @@ App Frappe/ERPNext per integrazione con servizi **OpenAPI.it** per fatturazione 
 ## 📦 Installazione
 
 ```bash
-# Ottieni l'app
-bench get-app openapi
+# Ottieni l'app da GitHub
+bench get-app https://github.com/Solede-SA/openapi.git
 
 # Installa nel sito
 bench --site [nome-sito] install-app openapi
