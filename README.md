@@ -14,6 +14,7 @@ App Frappe/ERPNext per integrazione con servizi **OpenAPI.it** per fatturazione 
 - ✅ Ricerca e validazione aziende tramite P.IVA/Codice Fiscale
 - ✅ Auto-popolamento dati anagrafici (denominazione, PEC, sede legale)
 - ✅ **Credit Scoring Advanced** - Verifica creditizia clienti azienda con rating e limite credito
+- ✅ **Dati Bilancio** - Fatturato, patrimonio netto, dipendenti da IT-advanced
 - ✅ **Negatività Persona** - Verifica protesti, pregiudizievoli e procedure per persone fisiche
 - ✅ Integrazione OpenAPI per **Customer e Supplier** con funzioni DRY
 - ✅ Import automatico fatture fornitori via webhook
@@ -101,6 +102,35 @@ result = frappe.call("openapi.api.aziende.credit_scoring.get_credit_score",
 ```
 
 **Nota**: Richiede abbonamento Credit Scoring Advanced su OpenAPI.it
+
+### Dati Bilancio (Aziende)
+
+Per clienti di tipo **Company** con P.IVA, è possibile recuperare i dati di bilancio:
+
+1. Apri il form Customer (di tipo Company)
+2. Clicca **OpenAPI > Dati Bilancio**
+3. Visualizza: Fatturato, Patrimonio Netto, Dipendenti, Anno Bilancio
+4. Clicca "Salva nel Cliente" per memorizzare i dati
+
+```python
+# Via API
+result = frappe.call("openapi.api.aziende.company_start.get_customer_bilancio",
+                     customer_name="ACME SRL")
+
+# Ritorna:
+{
+    "success": True,
+    "bilancio": {
+        "fatturato": 2661780,
+        "patrimonio_netto": 1293177,
+        "dipendenti": 5,
+        "anno_bilancio": 2024
+    },
+    "full_data": {...}
+}
+```
+
+**Nota**: Usa l'endpoint IT-advanced (sincrono). I dati includono lo storico fino a 7 anni.
 
 ### Verifica Negatività (Persone Fisiche)
 

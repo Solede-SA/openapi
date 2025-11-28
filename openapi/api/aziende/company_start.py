@@ -659,3 +659,110 @@ def verify_existing_customer(customer_name):
 def update_customer_from_openapi(customer_name, fields_to_update):
     """Wrapper per retrocompatibilità - usa update_party_from_openapi"""
     return update_party_from_openapi("Customer", customer_name, fields_to_update)
+
+
+@frappe.whitelist()
+def get_customer_bilancio(customer_name):
+    """
+    Recupera dati bilancio di un cliente tramite IT-advanced (sincrono).
+
+    Args:
+        customer_name: Nome del documento Customer
+
+    Returns:
+        dict con dati bilancio
+    """
+    customer = frappe.get_doc("Customer", customer_name)
+
+    if customer.customer_type != "Company":
+        return {"error": "I dati bilancio sono disponibili solo per clienti di tipo Azienda"}
+
+    if not customer.tax_id:
+        return {"error": "Il cliente non ha partita IVA/codice fiscale"}
+
+    # Chiama IT-advanced (sincrono) per ottenere dati azienda
+    advanced_data = get_company_start_data(customer.tax_id)
+
+    if "error" in advanced_data:
+        return advanced_data
+
+    # Estrai dati bilancio
+    bilancio = extract_bilancio_data(advanced_data)
+
+    return {
+        "success": True,
+        "bilancio": bilancio,
+        "full_data": advanced_data
+    }
+
+
+def extract_bilancio_data(data):
+    """
+    Estrae i dati del bilancio dalla risposta IT-advanced.
+
+    Args:
+        data: Risposta da IT-advanced
+
+    Returns:
+        dict con fatturato, patrimonio_netto, dipendenti, anno
+    """
+    bilancio = {
+        "fatturato": None,
+        "patrimonio_netto": None,
+        "dipendenti": None,
+        "anno_bilancio": None
+    }
+
+    # IT-advanced: balanceSheets.last
+    balance_sheets = data.get("balanceSheets") or {}
+    last_balance = balance_sheets.get("last") or {}
+
+    if last_balance:
+        bilancio["fatturato"] = last_balance.get("turnover")
+        bilancio["patrimonio_netto"] = last_balance.get("netWorth")
+        bilancio["dipendenti"] = last_balance.get("employees")
+        bilancio["anno_bilancio"] = last_balance.get("year")
+
+    return bilancio
+
+
+@frappe.whitelist()
+def save_bilancio_to_customer(customer_name, bilancio_data, full_data=None):
+    """
+    Salva i dati del bilancio nei custom fields del cliente.
+
+    Args:
+        customer_name: Nome del documento Customer
+        bilancio_data: Dati bilancio estratti
+        full_data: Dati completi da salvare in JSON (opzionale)
+    """
+    if isinstance(bilancio_data, str):
+        bilancio_data = json.loads(bilancio_data)
+    if isinstance(full_data, str):
+        full_data = json.loads(full_data)
+
+    customer = frappe.get_doc("Customer", customer_name)
+
+    # Salva dati bilancio specifici
+    if bilancio_data.get("fatturato") is not None:
+        customer.custom_bilancio_fatturato = bilancio_data["fatturato"]
+
+    if bilancio_data.get("patrimonio_netto") is not None:
+        customer.custom_bilancio_patrimonio_netto = bilancio_data["patrimonio_netto"]
+
+    if bilancio_data.get("dipendenti") is not None:
+        customer.custom_bilancio_dipendenti = bilancio_data["dipendenti"]
+
+    if bilancio_data.get("anno_bilancio"):
+        customer.custom_bilancio_anno = str(bilancio_data["anno_bilancio"])
+
+    # Salva JSON completo
+    if full_data:
+        customer.custom_company_full_data = json.dumps(full_data, indent=2, ensure_ascii=False)
+
+    # Data aggiornamento
+    customer.custom_bilancio_data_aggiornamento = frappe.utils.now()
+
+    customer.save()
+
+    return {"success": True, "message": "Dati bilancio salvati con successo"}
