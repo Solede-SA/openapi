@@ -13,7 +13,8 @@ App Frappe/ERPNext per integrazione con servizi **OpenAPI.it** per fatturazione 
 - ✅ Webhook per ricezione notifiche SDI in tempo reale
 - ✅ Ricerca e validazione aziende tramite P.IVA/Codice Fiscale
 - ✅ Auto-popolamento dati anagrafici (denominazione, PEC, sede legale)
-- ✅ **Credit Scoring Advanced** - Verifica creditizia clienti con rating e limite credito
+- ✅ **Credit Scoring Advanced** - Verifica creditizia clienti azienda con rating e limite credito
+- ✅ **Negatività Persona** - Verifica protesti, pregiudizievoli e procedure per persone fisiche
 - ✅ Integrazione OpenAPI per **Customer e Supplier** con funzioni DRY
 - ✅ Import automatico fatture fornitori via webhook
 - ✅ Tracking completo stato transazioni SDI
@@ -58,10 +59,12 @@ Vai in **OpenAPI Services** e crea i seguenti record:
 | `Company Start` | `https://business.openapi.com` |
 | `Company` | `https://business.openapi.com` |
 | `Credit Scoring Advanced` | `https://risk.openapi.com` |
+| `Negativita Persona` | `https://risk.openapi.com` |
 
 Questi servizi sono necessari per le diverse funzionalità:
 - **Company Start / Company**: Ricerca aziende per P.IVA/CF e ragione sociale
-- **Credit Scoring Advanced**: Verifica creditizia clienti (richiede abbonamento specifico)
+- **Credit Scoring Advanced**: Verifica creditizia clienti azienda (richiede abbonamento specifico)
+- **Negativita Persona**: Verifica protesti, pregiudizievoli e procedure concorsuali per persone fisiche
 
 ## 🚀 Utilizzo
 
@@ -98,6 +101,38 @@ result = frappe.call("openapi.api.aziende.credit_scoring.get_credit_score",
 ```
 
 **Nota**: Richiede abbonamento Credit Scoring Advanced su OpenAPI.it
+
+### Verifica Negatività (Persone Fisiche)
+
+Per clienti di tipo **Individual** con codice fiscale, è disponibile la verifica negatività:
+
+1. Apri il form Customer (di tipo Individual)
+2. Clicca **OpenAPI > Verifica Negatività**
+3. La richiesta viene inviata (API asincrona)
+4. Usa **Controlla Stato Negatività** per verificare il completamento
+5. Visualizza: Protesti, Pregiudizievoli, Procedure Concorsuali
+
+```python
+# Via API
+result = frappe.call("openapi.api.aziende.negativita_persona.request_negativita_check",
+                     fiscal_code="RSSMRA80A01H501U",
+                     customer_name="Mario Rossi")
+
+# Ritorna:
+{
+    "success": True,
+    "request_id": "abc123",
+    "status": "PENDING",
+    "message": "Richiesta inviata..."
+}
+
+# Controlla stato
+result = frappe.call("openapi.api.aziende.negativita_persona.check_request_status",
+                     request_id="abc123",
+                     customer_name="Mario Rossi")
+```
+
+**Nota**: Richiede abbonamento Negatività Persona su OpenAPI.it. L'API è asincrona e supporta callback webhook.
 
 ### Ricerca Aziende
 
@@ -253,7 +288,8 @@ openapi/
 │   │   ├── aziende/          # Ricerca aziende
 │   │   │   ├── search.py     # P.IVA/CF lookup
 │   │   │   ├── company_start.py  # Dati anagrafici azienda
-│   │   │   └── credit_scoring.py # Credit Scoring Advanced
+│   │   │   ├── credit_scoring.py # Credit Scoring Advanced
+│   │   │   └── negativita_persona.py # Negatività persone fisiche
 │   │   └── eInvoice/         # Import fatture passive
 │   │       └── purchase_invoice.py
 │   │
