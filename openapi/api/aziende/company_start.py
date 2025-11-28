@@ -288,29 +288,36 @@ def get_company_full_data(vat_or_tax_code):
 
 
 @frappe.whitelist()
-def verify_existing_customer(customer_name):
-    """Verifica e confronta dati di un cliente esistente con OpenAPI"""
-    customer = frappe.get_doc("Customer", customer_name)
-    # customer_name qui è l'ID del documento (es. CUST-00001), non il nome della ragione sociale
+def verify_existing_party(party_type, party_name):
+    """Verifica e confronta dati di un cliente/fornitore esistente con OpenAPI
 
-    if not customer.tax_id:
-        return {"error": "Il cliente non ha partita IVA/codice fiscale"}
+    Args:
+        party_type: 'Customer' o 'Supplier'
+        party_name: Nome del documento
+    """
+    party = frappe.get_doc(party_type, party_name)
 
-    openapi_data = get_company_start_data(customer.tax_id)
+    if not party.tax_id:
+        return {"error": f"Il {party_type.lower()} non ha partita IVA/codice fiscale"}
+
+    openapi_data = get_company_start_data(party.tax_id)
 
     if "error" in openapi_data:
         return openapi_data
 
     differences = []
 
+    # Campo nome dipende dal party_type
+    name_field = "customer_name" if party_type == "Customer" else "supplier_name"
+    party_name_value = getattr(party, name_field, "") or ""
+
     # Confronta ragione sociale - IT-start usa "companyName"
     openapi_name = openapi_data.get("companyName") or ""
-    customer_name = customer.customer_name or ""
-    if openapi_name != customer_name and openapi_name:
+    if openapi_name != party_name_value and openapi_name:
         differences.append(
             {
-                "field": "customer_name",
-                "current": customer_name,
+                "field": name_field,
+                "current": party_name_value,
                 "openapi": openapi_name,
                 "label": "Ragione Sociale",
             }
@@ -318,31 +325,31 @@ def verify_existing_customer(customer_name):
 
     # Confronta partita IVA - IT-start usa "vatCode"
     openapi_vat = openapi_data.get("vatCode") or ""
-    customer_vat = customer.tax_id or ""
-    if openapi_vat != customer_vat and openapi_vat:
+    party_vat = party.tax_id or ""
+    if openapi_vat != party_vat and openapi_vat:
         differences.append(
             {
                 "field": "tax_id",
-                "current": customer_vat,
+                "current": party_vat,
                 "openapi": openapi_vat,
                 "label": "Partita IVA",
             }
         )
 
     # Confronta codice fiscale - per le aziende è uguale alla partita IVA
-    customer_fiscal = customer.fiscal_code or ""
-    if openapi_vat != customer_fiscal and openapi_vat:
+    party_fiscal = getattr(party, "fiscal_code", "") or ""
+    if openapi_vat != party_fiscal and openapi_vat:
         differences.append(
             {
                 "field": "fiscal_code",
-                "current": customer_fiscal,
+                "current": party_fiscal,
                 "openapi": openapi_vat,
                 "label": "Codice Fiscale",
             }
         )
 
     # Verifica stato azienda - IT-start usa "activityStatus"
-    if openapi_data.get("activityStatus") == "CESSATA" and not customer.disabled:
+    if openapi_data.get("activityStatus") == "CESSATA" and not party.disabled:
         differences.append(
             {
                 "field": "disabled",
@@ -353,30 +360,30 @@ def verify_existing_customer(customer_name):
         )
 
     # Verifica codice SDI
-    if hasattr(customer, "custom_codice_univoco"):
+    if hasattr(party, "custom_codice_univoco"):
         openapi_sdi = openapi_data.get("sdiCode") or ""
-        customer_sdi = customer.custom_codice_univoco or ""
-        if openapi_sdi != customer_sdi and openapi_sdi:
+        party_sdi = party.custom_codice_univoco or ""
+        if openapi_sdi != party_sdi and openapi_sdi:
             differences.append(
                 {
                     "field": "custom_codice_univoco",
-                    "current": customer_sdi,
+                    "current": party_sdi,
                     "openapi": openapi_sdi,
                     "label": "Codice Univoco SDI",
                 }
             )
 
     # Verifica PEC
-    if hasattr(customer, "pec"):
+    if hasattr(party, "pec"):
         openapi_pec = openapi_data.get("pec") or ""
-        customer_pec = customer.pec or ""
+        party_pec = party.pec or ""
         if (
-            openapi_pec != customer_pec and openapi_pec
+            openapi_pec != party_pec and openapi_pec
         ):  # Solo se OpenAPI ha una PEC diversa
             differences.append(
                 {
                     "field": "pec",
-                    "current": customer_pec,
+                    "current": party_pec,
                     "openapi": openapi_pec,
                     "label": "PEC",
                 }
@@ -385,18 +392,17 @@ def verify_existing_customer(customer_name):
     # Verifica indirizzo e provincia
     if openapi_data.get("address"):
         # Troviamo l'indirizzo principale tramite Dynamic Link
-        # Usa customer.name che è l'ID del documento Customer
         primary_address = frappe.db.get_value(
             "Dynamic Link",
             {
-                "link_doctype": "Customer",
-                "link_name": customer.name,  # Usa l'ID del documento, non il parametro
+                "link_doctype": party_type,
+                "link_name": party.name,
                 "parenttype": "Address",
             },
             "parent",
         )
 
-        print(f"DEBUG: Looking for address linked to customer ID: {customer.name}")
+        print(f"DEBUG: Looking for address linked to {party_type} ID: {party.name}")
         print(f"DEBUG: Primary address found: {primary_address}")
 
         if primary_address:
@@ -471,8 +477,14 @@ def verify_existing_customer(customer_name):
 
 
 @frappe.whitelist()
-def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
-    """Prepara i dati per creare un nuovo cliente da OpenAPI"""
+def create_party_from_openapi(party_type, vat_or_tax_code, use_full_data=False):
+    """Prepara i dati per creare un nuovo cliente/fornitore da OpenAPI
+
+    Args:
+        party_type: 'Customer' o 'Supplier'
+        vat_or_tax_code: P.IVA o Codice Fiscale
+        use_full_data: Se True usa IT-full invece di IT-start
+    """
     if use_full_data:
         data = get_company_full_data(vat_or_tax_code)
     else:
@@ -483,27 +495,41 @@ def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
 
     # Gestisci i diversi formati di risposta (IT-search vs IT-start/full)
     vat_code = data.get("vatCode", data.get("vatNumber", data.get("taxCode", "")))
-    customer_data = {
-        "doctype": "Customer",
-        "customer_name": data.get("companyName", data.get("name", "")),
-        "tax_id": vat_code,
-        "fiscal_code": vat_code,  # Per le aziende, fiscal_code è uguale a tax_id
-        "customer_type": "Company",
-        "disabled": 1
-        if data.get("activityStatus") == "CESSATA" or data.get("status") == "CESSATA"
-        else 0,
-    }
+
+    # Costruisci dati base in base al party_type
+    if party_type == "Customer":
+        party_data = {
+            "doctype": "Customer",
+            "customer_name": data.get("companyName", data.get("name", "")),
+            "tax_id": vat_code,
+            "fiscal_code": vat_code,
+            "customer_type": "Company",
+            "disabled": 1
+            if data.get("activityStatus") == "CESSATA" or data.get("status") == "CESSATA"
+            else 0,
+        }
+    else:  # Supplier
+        party_data = {
+            "doctype": "Supplier",
+            "supplier_name": data.get("companyName", data.get("name", "")),
+            "tax_id": vat_code,
+            "fiscal_code": vat_code,
+            "supplier_type": "Company",
+            "disabled": 1
+            if data.get("activityStatus") == "CESSATA" or data.get("status") == "CESSATA"
+            else 0,
+        }
 
     # Aggiungi codice SDI se presente
     if data.get("sdiCode"):
-        customer_data["custom_codice_univoco"] = data["sdiCode"]
+        party_data["custom_codice_univoco"] = data["sdiCode"]
         print(f"SDI Code trovato: {data['sdiCode']}")
     else:
         print("SDI Code NON trovato nei dati")
 
     # Aggiungi PEC se presente
     if data.get("pec"):
-        customer_data["pec"] = data["pec"]
+        party_data["pec"] = data["pec"]
         print(f"PEC trovata: {data['pec']}")
     else:
         print("PEC NON trovata nei dati")
@@ -539,33 +565,49 @@ def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
                 "is_shipping_address": 0,
             }
 
-    print(f"CUSTOMER_DATA FINALE: {json.dumps(customer_data, indent=2)}")
+    print(f"PARTY_DATA FINALE: {json.dumps(party_data, indent=2)}")
 
     return {
-        "customer_data": customer_data,
+        "party_data": party_data,
         "address_data": address_data,
         "source_data": data,
     }
 
 
 @frappe.whitelist()
-def update_customer_from_openapi(customer_name, fields_to_update):
-    """Aggiorna campi selezionati di un cliente esistente"""
+def create_customer_from_openapi(vat_or_tax_code, use_full_data=False):
+    """Wrapper per retrocompatibilità - usa create_party_from_openapi"""
+    result = create_party_from_openapi("Customer", vat_or_tax_code, use_full_data)
+    # Rinomina party_data in customer_data per retrocompatibilità
+    if "party_data" in result:
+        result["customer_data"] = result.pop("party_data")
+    return result
+
+
+@frappe.whitelist()
+def update_party_from_openapi(party_type, party_name, fields_to_update):
+    """Aggiorna campi selezionati di un cliente/fornitore esistente
+
+    Args:
+        party_type: 'Customer' o 'Supplier'
+        party_name: Nome del documento
+        fields_to_update: Lista di campi da aggiornare
+    """
     if isinstance(fields_to_update, str):
         fields_to_update = json.loads(fields_to_update)
 
-    customer = frappe.get_doc("Customer", customer_name)
+    party = frappe.get_doc(party_type, party_name)
     address_updated = False
 
     for field in fields_to_update:
         # Gestisci campi speciali dell'indirizzo
         if field["field"] == "address_province":
-            # Recupera l'indirizzo principale del cliente
+            # Recupera l'indirizzo principale
             primary_address = frappe.db.get_value(
                 "Dynamic Link",
                 {
-                    "link_doctype": "Customer",
-                    "link_name": customer_name,
+                    "link_doctype": party_type,
+                    "link_name": party_name,
                     "parenttype": "Address",
                 },
                 "parent",
@@ -575,7 +617,6 @@ def update_customer_from_openapi(customer_name, fields_to_update):
                 address_doc = frappe.get_doc("Address", primary_address)
                 # Rimuovi eventuali note di warning dalla provincia
                 new_province = field["openapi"]
-                # Rimuovi tutti i possibili warning
                 new_province = new_province.replace(
                     " ⚠️ (Formato non standard - dovrebbe essere 2 lettere)", ""
                 )
@@ -585,24 +626,36 @@ def update_customer_from_openapi(customer_name, fields_to_update):
                 address_doc.save()
                 address_updated = True
 
-                # Log warning se provincia non è 2 lettere
                 if len(new_province) != 2:
                     frappe.log_error(
-                        f"Provincia aggiornata con formato non standard: '{new_province}' per cliente {customer_name}",
+                        f"Provincia aggiornata con formato non standard: '{new_province}' per {party_type.lower()} {party_name}",
                         "OpenAPI Province Update Warning",
                     )
 
-        # Gestisci campi standard del cliente
-        elif hasattr(customer, field["field"]):
+        # Gestisci campi standard
+        elif hasattr(party, field["field"]):
             if field["field"] == "disabled":
-                customer.disabled = 1 if field["openapi"] == "Cessata" else 0
+                party.disabled = 1 if field["openapi"] == "Cessata" else 0
             else:
-                setattr(customer, field["field"], field["openapi"])
+                setattr(party, field["field"], field["openapi"])
 
-    customer.save()
+    party.save()
 
-    message = f"Cliente {customer_name} aggiornato con successo"
+    party_label = "Cliente" if party_type == "Customer" else "Fornitore"
+    message = f"{party_label} {party_name} aggiornato con successo"
     if address_updated:
         message += " (incluso indirizzo)"
 
     return {"success": True, "message": message}
+
+
+@frappe.whitelist()
+def verify_existing_customer(customer_name):
+    """Wrapper per retrocompatibilità - usa verify_existing_party"""
+    return verify_existing_party("Customer", customer_name)
+
+
+@frappe.whitelist()
+def update_customer_from_openapi(customer_name, fields_to_update):
+    """Wrapper per retrocompatibilità - usa update_party_from_openapi"""
+    return update_party_from_openapi("Customer", customer_name, fields_to_update)

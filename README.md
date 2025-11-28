@@ -13,10 +13,11 @@ App Frappe/ERPNext per integrazione con servizi **OpenAPI.it** per fatturazione 
 - ✅ Webhook per ricezione notifiche SDI in tempo reale
 - ✅ Ricerca e validazione aziende tramite P.IVA/Codice Fiscale
 - ✅ Auto-popolamento dati anagrafici (denominazione, PEC, sede legale)
+- ✅ **Credit Scoring Advanced** - Verifica creditizia clienti con rating e limite credito
+- ✅ Integrazione OpenAPI per **Customer e Supplier** con funzioni DRY
 - ✅ Import automatico fatture fornitori via webhook
 - ✅ Tracking completo stato transazioni SDI
 - ✅ Configurazione multi-company con token separati
-- ✅ ~1,600 linee di codice Python production-ready
 
 ## 📦 Installazione
 
@@ -50,10 +51,17 @@ Vai in **Company** → Seleziona la tua azienda e compila:
 
 ### 3. Configurazione OpenAPI Services
 
-Crea un documento **OpenAPI Services**:
-- **API Token**: Token OpenAPI.it
-- **Environment**: Produzione/Test
-- **Company**: Link alla company ERPNext
+Vai in **OpenAPI Services** e crea i seguenti record:
+
+| Nome | URL |
+|------|-----|
+| `Company Start` | `https://business.openapi.com` |
+| `Company` | `https://business.openapi.com` |
+| `Credit Scoring Advanced` | `https://risk.openapi.com` |
+
+Questi servizi sono necessari per le diverse funzionalità:
+- **Company Start / Company**: Ricerca aziende per P.IVA/CF e ragione sociale
+- **Credit Scoring Advanced**: Verifica creditizia clienti (richiede abbonamento specifico)
 
 ## 🚀 Utilizzo
 
@@ -64,6 +72,32 @@ Questa app funziona come **Provider SDI** per l'app [italian_invoice](https://gi
 1. Installa sia `openapi` che `italian_invoice`
 2. In Company, imposta **Provider SDI** = "OpenAPI"
 3. Le fatture vengono inviate automaticamente al SDI tramite OpenAPI.it
+
+### Credit Scoring (Verifica Creditizia)
+
+Per clienti di tipo **Company** con P.IVA, è disponibile la verifica creditizia:
+
+1. Apri il form Customer
+2. Clicca **OpenAPI > Verifica Creditizia**
+3. Visualizza: Rating (A1-C3), Risk Score, Limite Credito Operativo
+4. Clicca "Salva nel Cliente" per memorizzare i dati
+
+```python
+# Via API
+result = frappe.call("openapi.api.aziende.credit_scoring.get_credit_score",
+                     vat_or_tax_code="12345678901")
+
+# Ritorna:
+{
+    "rating": "A2",
+    "risk_score": "Verde",
+    "risk_score_description": "Rischio basso",
+    "operational_credit_limit": 50000.00,
+    "risk_severity": 150
+}
+```
+
+**Nota**: Richiede abbonamento Credit Scoring Advanced su OpenAPI.it
 
 ### Ricerca Aziende
 
@@ -218,7 +252,8 @@ openapi/
 │   │   │   └── configurazione.py
 │   │   ├── aziende/          # Ricerca aziende
 │   │   │   ├── search.py     # P.IVA/CF lookup
-│   │   │   └── company_start.py
+│   │   │   ├── company_start.py  # Dati anagrafici azienda
+│   │   │   └── credit_scoring.py # Credit Scoring Advanced
 │   │   └── eInvoice/         # Import fatture passive
 │   │       └── purchase_invoice.py
 │   │
@@ -232,8 +267,10 @@ openapi/
 │   │   └── common_data.py
 │   │
 │   └── public/js/            # Client-side scripts
+│       ├── openapi_party_utils.js  # Funzioni comuni Customer/Supplier
 │       ├── custom_company.js
-│       ├── custom_customer.js
+│       ├── custom_customer.js      # Ricerca azienda + Credit Scoring
+│       ├── custom_supplier.js      # Ricerca azienda per Supplier
 │       ├── custom_sales_invoice.js
 │       └── custom_purchase_invoice.js
 │

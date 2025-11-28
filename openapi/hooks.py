@@ -11,7 +11,7 @@ app_license = "AGPLv3"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/openapi/css/openapi.css"
-# app_include_js = "/assets/openapi/js/openapi.js"
+app_include_js = "/assets/openapi/js/openapi_party_utils.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/openapi/css/openapi.css"
@@ -230,6 +230,7 @@ app_license = "AGPLv3"
 doctype_js = {
     "Company": "public/js/custom_company.js",
     "Customer": "public/js/custom_customer.js",
+    "Supplier": "public/js/custom_supplier.js",
     "Sales Invoice": "public/js/custom_sales_invoice.js",
     "Purchase Invoice": "public/js/custom_purchase_invoice.js",
 }
