@@ -36,16 +36,15 @@ def get_or_create_supplier(supplier_vat_id, fattura_fornitori_sdi):
 
 @frappe.whitelist()
 def process_supplier_invoice(
-    json_data_string, fattura_fornitori_sdi, item_mappings=None
+    json_data_string, fattura_fornitori_sdi, item_mappings=None, remember_mappings=None
 ):
     """
     Wrapper per retrocompatibilità - delega a italian_invoice
     Mantiene la stessa interfaccia per compatibilità con codice esistente
     """
     try:
-        # Delega completamente a italian_invoice
         return fatture_passive.process_supplier_invoice(
-            json_data_string, fattura_fornitori_sdi, item_mappings
+            json_data_string, fattura_fornitori_sdi, item_mappings, remember_mappings
         )
 
     except Exception as e:
