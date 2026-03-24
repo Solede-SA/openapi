@@ -23,6 +23,23 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 
+def log_sdi_webhook(event_type, payload, fiscal_id=None, company=None, result=None, error=None):
+    """Crea un record SDI Webhook Log"""
+    log = frappe.new_doc("SDI Webhook Log")
+    log.event_type = event_type
+    log.fiscal_id = fiscal_id
+    log.company = company
+    log.payload = json.dumps(payload, indent=2) if isinstance(payload, dict) else payload
+    log.response_status = "Error" if error else "Success"
+    if result:
+        log.processing_result = str(result)
+    if error:
+        log.error_message = str(error)
+    log.insert(ignore_permissions=True)
+    frappe.db.commit()
+    return log
+
+
 def search_value_in_json(data, target_key):
     """
     Cerca ricorsivamente un valore in una struttura JSON dato un determinato nome di chiave o un percorso parziale.
@@ -152,43 +169,49 @@ def supplier_invoice():
     Wrapper per retrocompatibilità - delega al provider SDI
     Mantiene allow_guest=True per compatibilità
     """
+    data = json.loads(frappe.request.data)
     try:
         import italian_invoice.utilities.fatture as fatture
 
-        data = json.loads(frappe.request.data)
-
-        # Delega al router centrale
         result = fatture.handle_sdi_webhook("supplier_invoice", data)
 
-        # Ritorna formato compatibile
         if result.get("success"):
+            log_sdi_webhook("supplier-invoice", data, result="OK")
             return "OK from supplier_invoice"
         else:
-            frappe.throw(result.get("message", "Errore elaborazione"))
+            error_msg = result.get("message", "Errore elaborazione")
+            log_sdi_webhook("supplier-invoice", data, error=error_msg)
+            frappe.throw(error_msg)
 
     except Exception as e:
-        logger.exception(f"Errore supplier_invoice: {str(e)}")
-        frappe.log_error(str(e), "Supplier Invoice Error")
+        log_sdi_webhook("supplier-invoice", data, error=str(e))
         raise
 
 
 @frappe.whitelist(allow_guest=False)
 def cutomer_invoice():
-    data_ok = get_data_ok(frappe.request.data)
-    save_notifica(data_ok)
-
-    return "OK from customer_invoice"
+    data = json.loads(frappe.request.data)
+    try:
+        data_ok = get_data_ok(frappe.request.data)
+        save_notifica(data_ok)
+        log_sdi_webhook("customer-invoice", data, result="OK")
+        return "OK from customer_invoice"
+    except Exception as e:
+        log_sdi_webhook("customer-invoice", data, error=str(e))
+        raise
 
 
 @frappe.whitelist(allow_guest=False)
 def invoice_status_quarantena():
-    print(frappe.request.data)
+    data = json.loads(frappe.request.data)
+    log_sdi_webhook("invoice-status-quarantena", data, result="Received")
     return "OK from invoice_status_quarantena"
 
 
 @frappe.whitelist(allow_guest=False)
 def invoice_status_invoice_error():
-    print(frappe.request.data)
+    data = json.loads(frappe.request.data)
+    log_sdi_webhook("invoice-status-invoice-error", data, result="Received")
     return "OK from invoice_status_invoice_error"
 
 
@@ -197,28 +220,29 @@ def customer_notification():
     """
     Wrapper per retrocompatibilità - delega al provider SDI
     """
+    data = json.loads(frappe.request.data)
     try:
         import italian_invoice.utilities.fatture as fatture
 
-        data = json.loads(frappe.request.data)
-
-        # Delega al router centrale
         result = fatture.handle_sdi_webhook("customer_notification", data)
 
-        # Ritorna formato compatibile
         if result.get("success"):
+            log_sdi_webhook("customer-notification", data, result="OK")
             return "OK from customer_notification"
         else:
-            frappe.throw(result.get("message", "Errore elaborazione"))
+            error_msg = result.get("message", "Errore elaborazione")
+            log_sdi_webhook("customer-notification", data, error=error_msg)
+            frappe.throw(error_msg)
 
     except Exception as e:
-        logger.exception(f"Errore customer_notification: {str(e)}")
+        log_sdi_webhook("customer-notification", data, error=str(e))
         raise
 
 
 @frappe.whitelist(allow_guest=False)
 def legal_storage_missing_vat():
-    print(frappe.request.data)
+    data = json.loads(frappe.request.data)
+    log_sdi_webhook("legal-storage-missing-vat", data, result="Received")
     return "OK from legal_storage_missing_vat"
 
 
@@ -227,20 +251,20 @@ def legal_storage_receipt():
     """
     Wrapper per retrocompatibilità - delega al provider SDI
     """
+    data = json.loads(frappe.request.data)
     try:
         import italian_invoice.utilities.fatture as fatture
 
-        data = json.loads(frappe.request.data)
-
-        # Delega al router centrale
         result = fatture.handle_sdi_webhook("legal_storage_receipt", data)
 
-        # Ritorna formato compatibile
         if result.get("success"):
+            log_sdi_webhook("legal-storage-receipt", data, result="OK")
             return "OK from legal_storage_receipt"
         else:
-            frappe.throw(result.get("message", "Errore elaborazione"))
+            error_msg = result.get("message", "Errore elaborazione")
+            log_sdi_webhook("legal-storage-receipt", data, error=error_msg)
+            frappe.throw(error_msg)
 
     except Exception as e:
-        logger.exception(f"Errore legal_storage_receipt: {str(e)}")
+        log_sdi_webhook("legal-storage-receipt", data, error=str(e))
         raise

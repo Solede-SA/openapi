@@ -1,0 +1,118 @@
+{
+	"actions": [],
+	"autoname": "format:WHL-SDI-{#####}",
+	"creation": "2026-03-24 00:00:00.000000",
+	"doctype": "DocType",
+	"engine": "InnoDB",
+	"field_order": [
+		"event_type",
+		"fiscal_id",
+		"timestamp",
+		"column_break_1",
+		"company",
+		"response_status",
+		"section_payload",
+		"payload",
+		"section_result",
+		"processing_result",
+		"section_error",
+		"error_message"
+	],
+	"fields": [
+		{
+			"fieldname": "event_type",
+			"fieldtype": "Data",
+			"in_list_view": 1,
+			"in_standard_filter": 1,
+			"label": "Event Type",
+			"reqd": 1
+		},
+		{
+			"fieldname": "fiscal_id",
+			"fieldtype": "Data",
+			"in_list_view": 1,
+			"label": "Fiscal ID"
+		},
+		{
+			"default": "Now",
+			"fieldname": "timestamp",
+			"fieldtype": "Datetime",
+			"in_list_view": 1,
+			"label": "Timestamp",
+			"read_only": 1
+		},
+		{
+			"fieldname": "column_break_1",
+			"fieldtype": "Column Break"
+		},
+		{
+			"fieldname": "company",
+			"fieldtype": "Link",
+			"label": "Company",
+			"options": "Company"
+		},
+		{
+			"default": "Success",
+			"fieldname": "response_status",
+			"fieldtype": "Select",
+			"in_list_view": 1,
+			"in_standard_filter": 1,
+			"label": "Response Status",
+			"options": "Success\nError"
+		},
+		{
+			"fieldname": "section_payload",
+			"fieldtype": "Section Break",
+			"label": "Payload"
+		},
+		{
+			"fieldname": "payload",
+			"fieldtype": "JSON",
+			"label": "Payload"
+		},
+		{
+			"fieldname": "section_result",
+			"fieldtype": "Section Break",
+			"label": "Processing Result"
+		},
+		{
+			"fieldname": "processing_result",
+			"fieldtype": "Small Text",
+			"label": "Processing Result"
+		},
+		{
+			"fieldname": "section_error",
+			"fieldtype": "Section Break",
+			"label": "Error Details"
+		},
+		{
+			"fieldname": "error_message",
+			"fieldtype": "Small Text",
+			"label": "Error Message"
+		}
+	],
+	"index_web_pages_for_search": 0,
+	"links": [],
+	"modified": "2026-03-24 00:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "Openapi",
+	"name": "SDI Webhook Log",
+	"naming_rule": "Expression",
+	"owner": "Administrator",
+	"permissions": [
+		{
+			"delete": 1,
+			"email": 1,
+			"export": 1,
+			"print": 1,
+			"read": 1,
+			"report": 1,
+			"role": "System Manager",
+			"share": 1
+		}
+	],
+	"sort_field": "creation",
+	"sort_order": "DESC",
+	"states": [],
+	"track_changes": 0
+}
