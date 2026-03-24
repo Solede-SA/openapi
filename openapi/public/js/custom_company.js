@@ -2,8 +2,10 @@ frappe.ui.form.on('Company', {
     refresh: function (frm) {
         if (frm.doc.custom_business_configuration != null) {
             frm.set_df_property('custom_crea_configurazione_openapi', 'hidden', true);
+            frm.add_custom_button(__('Aggiorna Configurazione OpenAPI'), function () {
+                frm.trigger('custom_aggiorna_configurazione_openapi');
+            }, __('OpenAPI'));
         }
-
     },
     custom_crea_configurazione_openapi: function (frm) {
         console.log(frm.doc)
@@ -33,6 +35,31 @@ frappe.ui.form.on('Company', {
 
             }
         })      
+    },
+    custom_aggiorna_configurazione_openapi: function (frm) {
+        frappe.call({
+            type: "POST",
+            method: "openapi.api.sdi.configurazione.update_business_register",
+            args: {
+                data: {
+                    "fiscal_id": frm.doc.tax_id,
+                    "name": frm.doc.name,
+                    "apply_signature": frm.doc.custom_apply_signature,
+                    "apply_legal_storage": frm.doc.custom_apply_legal_storage
+                },
+            },
+            freeze: true,
+            callback: function (r) {
+                if (r.message) {
+                    console.log(r.message)
+                    frm.dirty()
+                    frm.doc.custom_business_configuration = JSON.stringify(r.message)
+                    frm.save()
+                    frm.refresh()
+                    frappe.msgprint("Configurazione Aggiornata")
+                }
+            }
+        })
     },
     custom_invia_configurazione: function (frm) {
         frappe.call({

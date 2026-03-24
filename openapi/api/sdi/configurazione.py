@@ -38,6 +38,26 @@ def create_business_register(data):
         frappe.throw(f"Errore business register: {str(e)}")
 
 
+@frappe.whitelist()
+def update_business_register(data):
+    """
+    Aggiorna configurazione business register esistente (PATCH)
+    """
+    import italian_invoice.utilities.fatture as fatture
+
+    data = prepare_data(data)
+    company = frappe.get_doc("Company", data["name"])
+
+    provider = fatture.get_sdi_provider(company.name)
+    result = provider.update_business_register(company, data)
+
+    # Aggiorna il campo sulla Company
+    company.custom_business_configuration = frappe.as_json(result)
+    company.save(ignore_permissions=True)
+
+    return result
+
+
 def prepare_configuration(company):
     fiscal_id = company.tax_id
     callbacks = []
