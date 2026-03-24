@@ -51,10 +51,6 @@ def update_business_register(data):
     provider = fatture.get_sdi_provider(company.name)
     result = provider.update_business_register(company, data)
 
-    # Aggiorna il campo sulla Company
-    company.custom_business_configuration = frappe.as_json(result)
-    company.save(ignore_permissions=True)
-
     return result
 
 

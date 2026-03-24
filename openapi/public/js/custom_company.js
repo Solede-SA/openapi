@@ -1,6 +1,6 @@
 frappe.ui.form.on('Company', {
     refresh: function (frm) {
-        if (frm.doc.custom_business_configuration != null) {
+        if (frm.doc.custom_business_configuration) {
             frm.set_df_property('custom_crea_configurazione_openapi', 'hidden', true);
             frm.add_custom_button(__('Aggiorna Configurazione OpenAPI'), function () {
                 frm.trigger('custom_aggiorna_configurazione_openapi');
@@ -17,7 +17,7 @@ frappe.ui.form.on('Company', {
                     "fiscal_id": frm.doc.tax_id,
                     "name": frm.doc.name,
                     "email": frm.doc.tax_id + "@solede.com",
-                    "apply_signature": frm.doc.custom_apply_signature,  
+                    "apply_signature": frm.doc.custom_apply_signature,
                     "apply_legal_storage": frm.doc.custom_apply_legal_storage
 
                 },
@@ -34,7 +34,7 @@ frappe.ui.form.on('Company', {
                 }
 
             }
-        })      
+        })
     },
     custom_aggiorna_configurazione_openapi: function (frm) {
         frappe.call({
@@ -44,6 +44,7 @@ frappe.ui.form.on('Company', {
                 data: {
                     "fiscal_id": frm.doc.tax_id,
                     "name": frm.doc.name,
+                    "email": frm.doc.tax_id + "@solede.com",
                     "apply_signature": frm.doc.custom_apply_signature,
                     "apply_legal_storage": frm.doc.custom_apply_legal_storage
                 },
@@ -78,6 +79,6 @@ frappe.ui.form.on('Company', {
                 }
 
             }
-        })      
+        })
     }
 })
