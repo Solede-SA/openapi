@@ -38,20 +38,20 @@ frappe.ui.form.on("OpenApi Marca Temporale Settings", {
 				if (r.message && r.message.length) {
 					let rows = r.message.map((l) =>
 						`<tr>
-							<td style="padding:6px;border-bottom:1px solid #ddd">${l.id_marca || ""}</td>
 							<td style="padding:6px;border-bottom:1px solid #ddd">${l.type || ""}</td>
 							<td style="padding:6px;border-bottom:1px solid #ddd">${l.qty_marca || ""}</td>
 							<td style="padding:6px;border-bottom:1px solid #ddd">${l.username || ""}</td>
+							<td style="padding:6px;border-bottom:1px solid #ddd">${l.password || ""}</td>
 							<td style="padding:6px;border-bottom:1px solid #ddd">${l.timestamp_acquisto || ""}</td>
 						</tr>`
 					).join("");
 					frappe.msgprint(
 						`<table style="width:100%;border-collapse:collapse">
 							<thead><tr>
-								<th style="padding:6px;border-bottom:2px solid #333">ID</th>
 								<th style="padding:6px;border-bottom:2px solid #333">Tipo</th>
 								<th style="padding:6px;border-bottom:2px solid #333">Qty</th>
 								<th style="padding:6px;border-bottom:2px solid #333">Username</th>
+								<th style="padding:6px;border-bottom:2px solid #333">Password</th>
 								<th style="padding:6px;border-bottom:2px solid #333">Acquisto</th>
 							</tr></thead>
 							<tbody>${rows}</tbody>
