@@ -1,0 +1,145 @@
+{
+ "actions": [],
+ "creation": "2026-04-09 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "issingle": 1,
+ "field_order": [
+  "configurazione_section",
+  "provider",
+  "qty_acquisto",
+  "column_break_config",
+  "soglia_alert",
+  "auto_acquisto",
+  "credenziali_lotto_section",
+  "lotto_username",
+  "column_break_cred",
+  "lotto_password",
+  "stato_lotto_section",
+  "marche_disponibili",
+  "marche_usate",
+  "column_break_stato",
+  "ultimo_controllo",
+  "ultimo_acquisto"
+ ],
+ "fields": [
+  {
+   "fieldname": "configurazione_section",
+   "fieldtype": "Section Break",
+   "label": "Configurazione"
+  },
+  {
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "label": "Provider",
+   "options": "infocert\naruba",
+   "default": "infocert",
+   "reqd": 1
+  },
+  {
+   "fieldname": "qty_acquisto",
+   "fieldtype": "Select",
+   "label": "Quantit\u00e0 Acquisto Lotto",
+   "options": "100\n250\n500\n1000\n2000\n5000\n10000\n20000",
+   "default": "100",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_config",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "soglia_alert",
+   "fieldtype": "Int",
+   "label": "Soglia Alert",
+   "default": "10",
+   "description": "Invia alert quando le marche disponibili scendono sotto questa soglia"
+  },
+  {
+   "fieldname": "auto_acquisto",
+   "fieldtype": "Check",
+   "label": "Auto-Acquisto",
+   "default": "0",
+   "description": "Acquista automaticamente un nuovo lotto quando quello attuale si esaurisce"
+  },
+  {
+   "fieldname": "credenziali_lotto_section",
+   "fieldtype": "Section Break",
+   "label": "Credenziali Lotto Attivo"
+  },
+  {
+   "fieldname": "lotto_username",
+   "fieldtype": "Data",
+   "label": "Username Lotto",
+   "description": "Popolato automaticamente all'acquisto del lotto"
+  },
+  {
+   "fieldname": "column_break_cred",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "lotto_password",
+   "fieldtype": "Password",
+   "label": "Password Lotto",
+   "description": "Popolata automaticamente all'acquisto del lotto"
+  },
+  {
+   "fieldname": "stato_lotto_section",
+   "fieldtype": "Section Break",
+   "label": "Stato Lotto"
+  },
+  {
+   "fieldname": "marche_disponibili",
+   "fieldtype": "Int",
+   "label": "Marche Disponibili",
+   "read_only": 1
+  },
+  {
+   "fieldname": "marche_usate",
+   "fieldtype": "Int",
+   "label": "Marche Usate",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_stato",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ultimo_controllo",
+   "fieldtype": "Datetime",
+   "label": "Ultimo Controllo",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ultimo_acquisto",
+   "fieldtype": "Datetime",
+   "label": "Ultimo Acquisto",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-04-09 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Openapi",
+ "name": "OpenApi Marca Temporale Settings",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

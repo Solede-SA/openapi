@@ -133,23 +133,11 @@ app_include_js = "/assets/openapi/js/openapi_party_utils.js"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"openapi.tasks.all"
-# 	],
-# 	"daily": [
-# 		"openapi.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"openapi.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"openapi.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"openapi.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"openapi.openapi.doctype.openapi_marca_temporale_settings.openapi_marca_temporale_settings.check_lotto_e_alert",
+	],
+}
 
 # Testing
 # -------
