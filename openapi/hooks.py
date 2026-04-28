@@ -221,6 +221,13 @@ doctype_js = {
     "Supplier": "public/js/custom_supplier.js",
     "Sales Invoice": "public/js/custom_sales_invoice.js",
     "Purchase Invoice": "public/js/custom_purchase_invoice.js",
+    "Address": "public/js/custom_address.js",
+}
+
+doc_events = {
+    "Address": {
+        "before_save": "openapi.api.geocoding.validator.validate_and_geocode_address_hook",
+    },
 }
 
 doctype_list_js = {

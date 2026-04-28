@@ -4,3 +4,5 @@
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+openapi.patches.v1_0.setup_geocoder_service
+openapi.patches.v1_0.setup_address_geocode_fields
