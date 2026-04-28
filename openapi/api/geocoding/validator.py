@@ -15,12 +15,12 @@ import frappe
 from openapi.api.geocoding.forward import geocode_address
 
 
-# place_type ritornati dal geocoder che NON sono adatti come destinazione di
-# attivita' commerciale / spedizione di un dispositivo. Lista deliberatamente
-# breve: l'aggiunta di nuovi tipi richiede un ragionamento esplicito.
-NON_COMMERCIAL_PLACE_TYPES = {"stairs", "square", "street", "path", "pedestrian", "footway"}
-
-CONFIDENCE_THRESHOLD = 0.6
+# Toponimi nel nome della via che indicano luoghi pubblici / non commerciali.
+# Heuristica testuale leggera (l'API OpenAPI Geocoder non ritorna un place_type).
+NON_COMMERCIAL_TOKENS = (
+    "scala", "scalea", "scalinata", "piazzale", "piazza", "vicolo", "salita",
+    "ponte", "rotonda", "rotatoria", "parco", "giardini", "lungomare", "molo",
+)
 
 ADDRESS_TRIGGER_FIELDS = ("address_line1", "address_line2", "city", "pincode", "state", "country")
 
@@ -53,13 +53,17 @@ def _compute_warnings(addr, geo: dict) -> list:
         warnings.append(f"Indirizzo non riconosciuto dal geocoder ({geo.get('error') or 'no result'})")
         return warnings
 
-    confidence = geo.get("confidence")
-    if confidence is not None and confidence < CONFIDENCE_THRESHOLD:
-        warnings.append(f"Bassa confidenza geocoder ({confidence:.2f})")
+    # Numero civico non risolto dal geocoder (ambiguità in input)
+    if not (geo.get("street_number") or "").strip():
+        warnings.append("Numero civico non risolto dal geocoder (indirizzo ambiguo o senza civico)")
 
-    place_type = (geo.get("place_type") or "").lower()
-    if place_type and place_type in NON_COMMERCIAL_PLACE_TYPES:
-        warnings.append(f"Tipo luogo non idoneo per attività: {geo.get('place_type')}")
+    # Toponimo non idoneo (scalea, piazzale, scalinata, ...)
+    street_name = (geo.get("street_name") or "").lower()
+    line1_lower = line1.lower()
+    for tok in NON_COMMERCIAL_TOKENS:
+        if tok in street_name or tok in line1_lower:
+            warnings.append(f"Toponimo non idoneo per attività ('{tok}' nel nome via)")
+            break
 
     geo_city = (geo.get("city") or "").strip().lower()
     addr_city = (addr.get("city") or "").strip().lower()
@@ -73,6 +77,13 @@ def _compute_warnings(addr, geo: dict) -> list:
     if geo_pincode and addr_pincode and geo_pincode != addr_pincode:
         warnings.append(
             f"CAP inserito ({addr_pincode}) non corrisponde a quello riconosciuto ({geo_pincode})"
+        )
+
+    geo_state = (geo.get("state") or "").strip().upper()
+    addr_state = (addr.get("state") or "").strip().upper()
+    if geo_state and addr_state and geo_state != addr_state:
+        warnings.append(
+            f"Provincia inserita ({addr_state}) non corrisponde a quella riconosciuta ({geo_state})"
         )
 
     return warnings
@@ -105,8 +116,8 @@ def validate_and_geocode_address(address_doc, force=False):
     if geo.get("success"):
         address_doc.geocode_latitude = geo.get("lat")
         address_doc.geocode_longitude = geo.get("lon")
-        address_doc.geocode_confidence = geo.get("confidence")
-        address_doc.geocode_place_type = geo.get("place_type") or ""
+        address_doc.geocode_confidence = None  # API OpenAPI Geocoder non espone confidence
+        address_doc.geocode_place_type = geo.get("street_name") or ""
         address_doc.geocode_formatted_address = geo.get("formatted_address") or ""
         address_doc.geocode_status = "Warning" if warnings else "OK"
     else:

@@ -41,61 +41,57 @@ def _get_company_token():
 def _normalize_response(payload):
     """
     Mappa la risposta OpenAPI Geocoder allo schema interno.
-    OpenAPI ritorna tipicamente {"success": true, "data": [...]} con feature GeoJSON.
-    Tolleriamo formati diversi cercando i campi tipici.
+    Formato OpenAPI: {"element": {...}, "success": bool, "message": str, "error": null}.
+    L'element contiene latitude, longitude, streetNumber, streetName, postalCode,
+    locality, country, countryCode, adminLevels (1=regione, 2=provincia, 3=comune).
     """
+    base = {
+        "success": False,
+        "lat": None, "lon": None,
+        "street_number": None, "street_name": None,
+        "formatted_address": None,
+        "city": None, "pincode": None, "state": None, "country": None,
+        "raw": payload,
+        "error": None,
+    }
     if not isinstance(payload, dict):
-        return {"success": False, "error": "Risposta geocoder non valida (non dict)", "raw": payload}
+        return {**base, "error": "Risposta geocoder non valida (non dict)"}
 
     if not payload.get("success", True):
-        return {
-            "success": False,
-            "error": payload.get("message") or "Errore geocoder",
-            "raw": payload,
-            "lat": None, "lon": None, "confidence": None, "place_type": None,
-            "formatted_address": None, "city": None, "pincode": None, "state": None, "country": None,
-        }
+        return {**base, "error": payload.get("message") or "Errore geocoder"}
 
-    data = payload.get("data")
-    feature = None
-    if isinstance(data, list) and data:
-        feature = data[0]
-    elif isinstance(data, dict):
-        feature = data
-    else:
-        feature = payload  # alcuni servizi mettono i campi direttamente al top-level
+    element = payload.get("element")
+    if not isinstance(element, dict):
+        return {**base, "error": "Geocoder: nessun risultato"}
 
-    if not isinstance(feature, dict):
-        return {
-            "success": False, "error": "Geocoder: nessun risultato",
-            "raw": payload,
-            "lat": None, "lon": None, "confidence": None, "place_type": None,
-            "formatted_address": None, "city": None, "pincode": None, "state": None, "country": None,
-        }
+    lat = element.get("latitude")
+    lon = element.get("longitude")
+    admin_levels = element.get("adminLevels") or {}
+    province = ""
+    province_node = admin_levels.get("2") if isinstance(admin_levels, dict) else None
+    if isinstance(province_node, dict):
+        province = province_node.get("code") or province_node.get("name") or ""
 
-    # Estrai lat/lon (formati GeoJSON o flat)
-    lat = lon = None
-    geometry = feature.get("geometry") or {}
-    coords = geometry.get("coordinates")
-    if isinstance(coords, list) and len(coords) >= 2:
-        lon, lat = coords[0], coords[1]
-    else:
-        lat = feature.get("lat") or feature.get("latitude")
-        lon = feature.get("lon") or feature.get("lng") or feature.get("longitude")
-
-    properties = feature.get("properties") or feature
+    street_number = element.get("streetNumber") or ""
+    street_name = element.get("streetName") or ""
+    formatted = ", ".join(filter(None, [
+        f"{street_name} {street_number}".strip(),
+        f"{element.get('postalCode') or ''} {element.get('locality') or ''}".strip(),
+        province,
+        element.get("country") or "",
+    ]))
 
     return {
         "success": lat is not None and lon is not None,
         "lat": float(lat) if lat is not None else None,
         "lon": float(lon) if lon is not None else None,
-        "confidence": properties.get("confidence") or properties.get("relevance"),
-        "place_type": properties.get("type") or properties.get("place_type") or properties.get("category"),
-        "formatted_address": properties.get("formatted") or properties.get("display_name") or properties.get("label"),
-        "city": properties.get("city") or properties.get("town") or properties.get("locality"),
-        "pincode": properties.get("postcode") or properties.get("postal_code") or properties.get("zip"),
-        "state": properties.get("state") or properties.get("province") or properties.get("region"),
-        "country": properties.get("country"),
+        "street_number": street_number,
+        "street_name": street_name,
+        "formatted_address": formatted,
+        "city": element.get("locality") or "",
+        "pincode": element.get("postalCode") or "",
+        "state": province,
+        "country": element.get("countryCode") or element.get("country") or "",
         "raw": payload,
         "error": None,
     }
@@ -132,10 +128,11 @@ def geocode_address(query):
     headers = {
         "Authorization": token,
         "Content-Type": "application/json",
+        "Accept": "application/json",
     }
 
     try:
-        response = requests.get(url, headers=headers, params={"address": query}, timeout=10)
+        response = requests.post(url, headers=headers, json={"address": query}, timeout=10)
         if response.status_code != 200:
             details = None
             try:
