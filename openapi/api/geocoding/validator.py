@@ -154,3 +154,97 @@ def refresh_address_geocode(address_name):
     addr.flags.ignore_permissions = True
     addr.save()
     return {"success": True, "status": addr.geocode_status, "warnings": addr.geocode_warnings or ""}
+
+
+# Mappa Address.field -> chiave nel dict normalizzato dal geocoder + label umana
+_SUGGESTION_FIELDS = [
+    ("address_line1", "_recognized_line1", "Indirizzo (via + civico)"),
+    ("city", "city", "Città"),
+    ("pincode", "pincode", "CAP"),
+    ("state", "state", "Provincia"),
+]
+
+
+def _build_recognized_line1(geo: dict) -> str:
+    name = (geo.get("street_name") or "").strip()
+    num = (geo.get("street_number") or "").strip()
+    return f"{name} {num}".strip() if num else name
+
+
+@frappe.whitelist()
+def get_geocode_suggestions(address_name):
+    """
+    Ritorna i diff tra i campi Address correnti e quelli riconosciuti dal
+    geocoder (parsando geocode_payload). Nessuna chiamata API, solo lettura.
+    """
+    import json
+    addr = frappe.get_doc("Address", address_name)
+    raw = addr.get("geocode_payload") or ""
+    if not raw:
+        return {"available": False, "differences": []}
+    try:
+        # geocode_payload e' gia' il dict normalizzato (post _normalize_response)
+        geo = json.loads(raw)
+    except Exception:
+        return {"available": False, "differences": []}
+
+    if not geo.get("success"):
+        return {"available": False, "differences": []}
+
+    geo["_recognized_line1"] = _build_recognized_line1(geo)
+
+    diffs = []
+    for field, geo_key, label in _SUGGESTION_FIELDS:
+        current = (addr.get(field) or "").strip()
+        suggested = (geo.get(geo_key) or "").strip()
+        if not suggested:
+            continue
+        # confronto case-insensitive per testo, exact per CAP/provincia
+        equal = (
+            current.lower() == suggested.lower()
+            if field in ("address_line1", "city")
+            else current.upper() == suggested.upper()
+        )
+        if not equal:
+            diffs.append({
+                "field": field,
+                "label": label,
+                "current": current,
+                "suggested": suggested,
+            })
+    return {"available": True, "differences": diffs}
+
+
+@frappe.whitelist()
+def apply_geocode_suggestions(address_name, fields):
+    """
+    Applica le correzioni riconosciute dal geocoder ai campi specificati.
+
+    `fields` e' una lista (o stringa JSON) di nomi-campo Address da aggiornare
+    (es. ["pincode", "city"]). Per ognuno legge il valore "suggested" da
+    get_geocode_suggestions e lo scrive sul doc; al save() l'hook before_save
+    rigenera il geocoding (di solito porta status a OK).
+    """
+    import json
+    if isinstance(fields, str):
+        fields = json.loads(fields)
+    if not isinstance(fields, list) or not fields:
+        frappe.throw("Lista campi vuota")
+
+    suggestions = get_geocode_suggestions(address_name)
+    if not suggestions.get("available"):
+        frappe.throw("Nessun suggerimento disponibile per questo indirizzo")
+    by_field = {d["field"]: d["suggested"] for d in suggestions["differences"]}
+
+    addr = frappe.get_doc("Address", address_name)
+    applied = []
+    for field in fields:
+        if field in by_field:
+            setattr(addr, field, by_field[field])
+            applied.append(field)
+    if not applied:
+        frappe.throw("Nessuno dei campi richiesti ha un suggerimento")
+
+    addr.flags.ignore_permissions = True
+    addr.save()
+    return {"success": True, "applied": applied, "status": addr.geocode_status}
