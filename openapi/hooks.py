@@ -11,7 +11,10 @@ app_license = "AGPLv3"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/openapi/css/openapi.css"
-app_include_js = "/assets/openapi/js/openapi_party_utils.js"
+app_include_js = [
+    "/assets/openapi/js/openapi_party_utils.js",
+    "/assets/openapi/js/geocode_suggestions.js",
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/openapi/css/openapi.css"
