@@ -1,0 +1,83 @@
+{
+ "actions": [],
+ "creation": "2026-05-05 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "issingle": 1,
+ "field_order": [
+  "service",
+  "default_multiplier",
+  "column_break_main",
+  "last_sync_at",
+  "last_sync_count",
+  "tab_listino",
+  "listino_html"
+ ],
+ "fields": [
+  {
+   "fieldname": "service",
+   "fieldtype": "Link",
+   "label": "Servizio",
+   "options": "OpenApi Services",
+   "default": "Docuengine",
+   "read_only": 1
+  },
+  {
+   "fieldname": "default_multiplier",
+   "fieldtype": "Float",
+   "label": "Moltiplicatore di default",
+   "default": 1.5,
+   "precision": 3,
+   "description": "Prezzo cliente = costo OpenAPI × moltiplicatore. Es. 1.5 = +50%, 2 = doppio, 3 = triplo. Override possibile per singolo documento."
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_sync_at",
+   "fieldtype": "Datetime",
+   "label": "Ultima sincronizzazione",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_count",
+   "fieldtype": "Int",
+   "label": "Documenti sincronizzati",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tab_listino",
+   "fieldtype": "Tab Break",
+   "label": "Listino"
+  },
+  {
+   "fieldname": "listino_html",
+   "fieldtype": "HTML",
+   "label": "Listino Documenti"
+  }
+ ],
+ "modified": "2026-05-05 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "OpenApi",
+ "name": "Docuengine Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

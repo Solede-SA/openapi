@@ -1,0 +1,159 @@
+{
+ "actions": [],
+ "creation": "2026-05-05 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "autoname": "field:document_id",
+ "field_order": [
+  "document_id",
+  "document_name",
+  "category",
+  "column_break_main",
+  "enabled",
+  "is_sync_service",
+  "section_break_pricing",
+  "cost_eur",
+  "search_cost_eur",
+  "has_search_cost",
+  "column_break_pricing",
+  "multiplier_override",
+  "final_price_eur",
+  "section_break_meta",
+  "request_structure_json",
+  "last_seen_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "document_id",
+   "fieldtype": "Data",
+   "label": "Document ID",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "document_name",
+   "fieldtype": "Data",
+   "label": "Nome Documento",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Data",
+   "label": "Categoria",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Attivo",
+   "in_list_view": 1,
+   "description": "Se OFF il documento non viene mostrato al cliente nel dialog 'Importa dai registri pubblici'."
+  },
+  {
+   "default": "0",
+   "fieldname": "is_sync_service",
+   "fieldtype": "Check",
+   "label": "Servizio sincrono",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_pricing",
+   "fieldtype": "Section Break",
+   "label": "Pricing"
+  },
+  {
+   "fieldname": "cost_eur",
+   "fieldtype": "Currency",
+   "label": "Costo OpenAPI (EUR)",
+   "read_only": 1,
+   "options": "EUR"
+  },
+  {
+   "fieldname": "search_cost_eur",
+   "fieldtype": "Currency",
+   "label": "Costo Search (EUR)",
+   "read_only": 1,
+   "options": "EUR",
+   "depends_on": "has_search_cost"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_search_cost",
+   "fieldtype": "Check",
+   "label": "Ha costo Search separato",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pricing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "multiplier_override",
+   "fieldtype": "Float",
+   "label": "Moltiplicatore override",
+   "precision": 3,
+   "description": "Lascia vuoto per usare il moltiplicatore globale di Docuengine Settings. Es. 1.5 = +50%, 2 = doppio."
+  },
+  {
+   "fieldname": "final_price_eur",
+   "fieldtype": "Currency",
+   "label": "Prezzo Finale Cliente (EUR)",
+   "in_list_view": 1,
+   "read_only": 1,
+   "options": "EUR",
+   "description": "Calcolato: cost × moltiplicatore. Esposto al cliente."
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_meta",
+   "fieldtype": "Section Break",
+   "label": "Metadati API"
+  },
+  {
+   "fieldname": "request_structure_json",
+   "fieldtype": "Code",
+   "options": "JSON",
+   "label": "Request Structure (campi richiesti)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_seen_at",
+   "fieldtype": "Datetime",
+   "label": "Ultima sincronizzazione",
+   "read_only": 1
+  }
+ ],
+ "modified": "2026-05-05 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "OpenApi",
+ "name": "Docuengine Document Price",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "category",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 1
+}
