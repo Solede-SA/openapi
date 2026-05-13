@@ -1,0 +1,21 @@
+{
+ "app": "openapi",
+ "bg_color": "gray",
+ "creation": "2026-05-13 18:20:18.161185",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "globe",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "OpenAPI",
+ "link_to": "Openapi",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-05-13 18:20:18.161185",
+ "modified_by": "Administrator",
+ "name": "OpenAPI",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [],
+ "standard": 1
+}
