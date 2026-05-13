@@ -259,6 +259,24 @@ def get_signature_audit(signature_id: str, token: str | None = None) -> dict:
 	return _unwrap(r.json())
 
 
+def delete_signature(signature_id: str, token: str | None = None) -> dict:
+	"""DELETE /signatures/{id}.
+
+	Cancella sul server OpenAPI il documento firmato, i dettagli, l'audit trail.
+	Operazione **irreversibile** lato OpenAPI. Lato consumer è responsabilità
+	pulire i File Frappe associati e azzerare i campi sul DocType reference.
+	"""
+	path = f"/signatures/{signature_id}"
+	r = requests.delete(f"{_base_url()}{path}", headers=_headers(token, json_content=False), timeout=30)
+	if r.status_code >= 400:
+		_raise_error("DELETE", path, r)
+	# Body può essere vuoto su 200/204 — gestiamo entrambi
+	try:
+		return _unwrap(r.json())
+	except Exception:
+		return {"deleted": True, "signature_id": signature_id}
+
+
 def download_signed_document(signature_id: str, token: str | None = None) -> bytes:
 	"""GET /signatures/{id}/signedDocument.
 

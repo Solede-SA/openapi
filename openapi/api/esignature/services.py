@@ -590,6 +590,63 @@ def cancel_request(*, request_name: str,
 		on_refund(float(req.costo_eur or 0), f"Refund — sessione {request_name} annullata")
 
 
+def delete_signature_session(*, request_name: str,
+                              on_unsign_document: Callable | None = None) -> dict:
+	"""Cancella completamente una sessione di firma.
+
+	Use-case: richiesta GDPR del cliente, cleanup test, errore post-firma.
+	Operazione **irreversibile**:
+	  1. DELETE /signatures/{id} su OpenAPI (cancella signed document + audit trail server-side)
+	  2. Elimina i File Frappe del documento firmato attaccati alla Request
+	  3. Chiama on_unsign_document(reference_doctype, reference_name) per il consumer
+	     (es. garemed reset Gara Documento: firma_metodo=nessuno, firmato=0, ecc.)
+	  4. Mantiene il record OpenApi Signature Request con stato='annullata' per audit
+	     nostro (nessun refund — la firma era valida e completata)
+
+	Niente refund wallet: la firma era valida; il delete è azione successiva (GDPR).
+	"""
+	req = frappe.get_doc("OpenApi Signature Request", request_name)
+	if not req.openapi_signature_id:
+		frappe.throw(f"Sessione {request_name} senza openapi_signature_id — niente da cancellare su OpenAPI")
+	if req.stato == "annullata":
+		frappe.throw(f"Sessione {request_name} già annullata")
+
+	# 1. DELETE su OpenAPI (irreversibile server-side)
+	esign_client.delete_signature(req.openapi_signature_id)
+
+	# 2. Elimina File Frappe attached alla Request + reset child rows
+	for row in req.documenti:
+		if row.file_firmato:
+			file_doc_name = frappe.db.get_value("File", {"file_url": row.file_firmato}, "name")
+			if file_doc_name:
+				frappe.delete_doc("File", file_doc_name, ignore_permissions=True, delete_permanently=True)
+		# 3. Callback consumer per cleanup reference_doctype/reference_name
+		if on_unsign_document is not None and row.reference_doctype and row.reference_name:
+			try:
+				on_unsign_document(row.reference_doctype, row.reference_name)
+			except Exception as exc:
+				frappe.log_error(
+					message=f"on_unsign_document error per {row.reference_doctype}/{row.reference_name}: {exc}",
+					title=f"delete_signature_session {request_name}",
+				)
+		row.file_firmato = None
+		row.firmato_at = None
+
+	# 4. Aggiorna Request
+	req.stato = "annullata"
+	req.error_message = f"Sessione cancellata via DELETE /signatures/{req.openapi_signature_id}"
+	req.flags.ignore_permissions = True
+	req.save()
+	frappe.db.commit()
+
+	return {
+		"name": req.name,
+		"stato": req.stato,
+		"openapi_signature_id": req.openapi_signature_id,
+		"deleted_at": str(now_datetime()),
+	}
+
+
 # --- Validazione firma esterna -------------------------------------------
 
 def verify_external(*, file_bytes: bytes, filename: str | None = None,
