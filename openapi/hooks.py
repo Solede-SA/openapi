@@ -140,6 +140,11 @@ scheduler_events = {
 	"daily": [
 		"openapi.openapi.doctype.openapi_marca_temporale_settings.openapi_marca_temporale_settings.check_lotto_e_alert",
 	],
+	"cron": {
+		"*/30 * * * *": [
+			"openapi.api.esignature.services.poll_pending_certificates",
+		],
+	},
 }
 
 # Testing

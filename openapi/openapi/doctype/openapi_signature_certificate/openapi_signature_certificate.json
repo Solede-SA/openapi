@@ -1,0 +1,270 @@
+{
+ "actions": [],
+ "creation": "2026-05-13 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "autoname": "format:OASC-.{YY}.-.######",
+ "field_order": [
+  "customer",
+  "provider",
+  "column_break_main",
+  "stato",
+  "openapi_certificate_id",
+  "section_break_anagrafica",
+  "nome",
+  "cognome",
+  "codice_fiscale",
+  "data_nascita",
+  "column_break_anagrafica",
+  "comune_nascita",
+  "provincia_nascita",
+  "section_break_contatti",
+  "email_otp",
+  "telefono_otp",
+  "section_break_date",
+  "data_emissione",
+  "data_scadenza",
+  "column_break_date",
+  "submitted_at",
+  "completed_at",
+  "last_poll_at",
+  "section_break_identification",
+  "identification_url",
+  "cn_certificato",
+  "costo_eur",
+  "section_break_diagnostics",
+  "error_message",
+  "raw_response"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Cliente",
+   "options": "Customer",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Customer su cui addebitare il costo. Optional (impostato dal consumer che usa la libreria firma)."
+  },
+  {
+   "default": "namirial_otp",
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "label": "Provider",
+   "options": "namirial_otp\nnamirial_automatic\naruba_otp",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "pending",
+   "fieldname": "stato",
+   "fieldtype": "Select",
+   "label": "Stato",
+   "options": "pending\nin_attesa_identificazione\nattivo\nscaduto\nrevocato\nrifiutato\nerrore",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "openapi_certificate_id",
+   "fieldtype": "Data",
+   "label": "OpenAPI Certificate ID",
+   "unique": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "ID del certificato ritornato da OpenAPI eSignature."
+  },
+  {
+   "fieldname": "section_break_anagrafica",
+   "fieldtype": "Section Break",
+   "label": "Anagrafica firmatario"
+  },
+  {
+   "fieldname": "nome",
+   "fieldtype": "Data",
+   "label": "Nome",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cognome",
+   "fieldtype": "Data",
+   "label": "Cognome",
+   "reqd": 1
+  },
+  {
+   "fieldname": "codice_fiscale",
+   "fieldtype": "Data",
+   "label": "Codice fiscale",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "description": "16 caratteri."
+  },
+  {
+   "fieldname": "data_nascita",
+   "fieldtype": "Date",
+   "label": "Data di nascita",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_anagrafica",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "comune_nascita",
+   "fieldtype": "Data",
+   "label": "Comune di nascita",
+   "reqd": 1
+  },
+  {
+   "fieldname": "provincia_nascita",
+   "fieldtype": "Data",
+   "label": "Provincia di nascita",
+   "reqd": 1,
+   "description": "Sigla 2 lettere (es. MI, RM, NA)."
+  },
+  {
+   "fieldname": "section_break_contatti",
+   "fieldtype": "Section Break",
+   "label": "Contatti per OTP"
+  },
+  {
+   "fieldname": "email_otp",
+   "fieldtype": "Data",
+   "label": "Email per OTP",
+   "reqd": 1
+  },
+  {
+   "fieldname": "telefono_otp",
+   "fieldtype": "Data",
+   "label": "Telefono per OTP",
+   "reqd": 1,
+   "description": "Numero su cui Namirial invia l'OTP per ogni firma."
+  },
+  {
+   "fieldname": "section_break_date",
+   "fieldtype": "Section Break",
+   "label": "Stato e date"
+  },
+  {
+   "fieldname": "data_emissione",
+   "fieldtype": "Date",
+   "label": "Data emissione",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_scadenza",
+   "fieldtype": "Date",
+   "label": "Data scadenza",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_date",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "submitted_at",
+   "fieldtype": "Datetime",
+   "label": "Richiesta inviata",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_at",
+   "fieldtype": "Datetime",
+   "label": "Attivazione completata",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_poll_at",
+   "fieldtype": "Datetime",
+   "label": "Ultimo polling",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_identification",
+   "fieldtype": "Section Break",
+   "label": "Identificazione e audit"
+  },
+  {
+   "fieldname": "identification_url",
+   "fieldtype": "Small Text",
+   "label": "URL video-identificazione Namirial",
+   "read_only": 1,
+   "description": "Link da inviare al firmatario per completare il video-riconoscimento."
+  },
+  {
+   "fieldname": "cn_certificato",
+   "fieldtype": "Data",
+   "label": "Common Name certificato",
+   "read_only": 1,
+   "description": "CN del certificato attivato (es. ROSSI MARIO/IT-CF:RSSMRA80A01H501Z)."
+  },
+  {
+   "fieldname": "costo_eur",
+   "fieldtype": "Currency",
+   "label": "Costo (EUR)",
+   "options": "EUR",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_diagnostics",
+   "fieldtype": "Section Break",
+   "label": "Diagnostica"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Messaggio errore",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_response",
+   "fieldtype": "Code",
+   "options": "JSON",
+   "label": "Raw response OpenAPI",
+   "read_only": 1
+  }
+ ],
+ "modified": "2026-05-13 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "OpenApi",
+ "name": "OpenApi Signature Certificate",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "GareMed Org Admin"
+  },
+  {
+   "read": 1,
+   "role": "GareMed User"
+  },
+  {
+   "read": 1,
+   "role": "Licita Customer"
+  }
+ ],
+ "sort_field": "submitted_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

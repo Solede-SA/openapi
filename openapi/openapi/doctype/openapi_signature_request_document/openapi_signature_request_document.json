@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "creation": "2026-05-13 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "istable": 1,
+ "field_order": [
+  "nome_file_originale",
+  "md5_originale",
+  "column_break_doc",
+  "reference_doctype",
+  "reference_name",
+  "section_break_signed",
+  "file_firmato",
+  "firmato_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "nome_file_originale",
+   "fieldtype": "Data",
+   "label": "Nome file originale",
+   "in_list_view": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "md5_originale",
+   "fieldtype": "Data",
+   "label": "MD5 originale",
+   "read_only": 1,
+   "description": "Calcolato al submit per rilevare modifiche post-firma."
+  },
+  {
+   "fieldname": "column_break_doc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "DocType di riferimento",
+   "options": "DocType",
+   "in_list_view": 1,
+   "description": "DocType del consumer (es. 'Gara Documento'). Permette callback al consumer dopo la firma."
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "options": "reference_doctype",
+   "label": "Record di riferimento",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_signed",
+   "fieldtype": "Section Break",
+   "label": "File firmato"
+  },
+  {
+   "fieldname": "file_firmato",
+   "fieldtype": "Attach",
+   "label": "File firmato",
+   "read_only": 1,
+   "description": "Copia del file firmato p7m/PAdES, salvata privatamente sulla riga."
+  },
+  {
+   "fieldname": "firmato_at",
+   "fieldtype": "Datetime",
+   "label": "Firmato il",
+   "read_only": 1
+  }
+ ],
+ "modified": "2026-05-13 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "OpenApi",
+ "name": "OpenApi Signature Request Document",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

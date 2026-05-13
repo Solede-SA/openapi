@@ -1,0 +1,92 @@
+{
+ "actions": [],
+ "creation": "2026-05-13 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "issingle": 1,
+ "field_order": [
+  "service",
+  "sandbox_mode",
+  "column_break_main",
+  "cert_namirial_otp_eur",
+  "firma_per_doc_eur",
+  "timestamp_eur",
+  "verify_eur"
+ ],
+ "fields": [
+  {
+   "fieldname": "service",
+   "fieldtype": "Link",
+   "label": "Servizio",
+   "options": "OpenApi Services",
+   "default": "eSignature",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "sandbox_mode",
+   "fieldtype": "Check",
+   "label": "Sandbox mode",
+   "description": "Se attivo, il client punta a test.esignature.openapi.com invece di esignature.openapi.com."
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cert_namirial_otp_eur",
+   "fieldtype": "Currency",
+   "label": "Costo emissione certificato Namirial OTP (EUR)",
+   "options": "EUR",
+   "default": 137,
+   "description": "Costo netto fornitore una tantum per emissione certificato Namirial OTP, validità 3 anni."
+  },
+  {
+   "fieldname": "firma_per_doc_eur",
+   "fieldtype": "Currency",
+   "label": "Costo per firma documento (EUR)",
+   "options": "EUR",
+   "default": 0.05,
+   "description": "Costo netto fornitore per ogni documento firmato in un batch."
+  },
+  {
+   "fieldname": "timestamp_eur",
+   "fieldtype": "Currency",
+   "label": "Costo marca temporale (EUR)",
+   "options": "EUR",
+   "default": 0.15,
+   "description": "Costo netto fornitore per apposizione marca temporale."
+  },
+  {
+   "fieldname": "verify_eur",
+   "fieldtype": "Currency",
+   "label": "Costo verifica firma esterna (EUR)",
+   "options": "EUR",
+   "default": 0.10,
+   "description": "Costo netto fornitore per validazione di un file firmato offline."
+  }
+ ],
+ "modified": "2026-05-13 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "OpenApi",
+ "name": "OpenApi Signature Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

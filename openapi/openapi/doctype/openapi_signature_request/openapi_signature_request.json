@@ -1,0 +1,201 @@
+{
+ "actions": [],
+ "creation": "2026-05-13 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "autoname": "format:OASR-.{YY}.-.######",
+ "field_order": [
+  "certificate",
+  "customer",
+  "consumer_app",
+  "column_break_main",
+  "stato",
+  "signature_type",
+  "with_timestamp",
+  "section_break_openapi",
+  "openapi_signature_id",
+  "otp_destination_masked",
+  "otp_expires_at",
+  "column_break_openapi",
+  "costo_eur",
+  "richiesta_at",
+  "completata_at",
+  "section_break_docs",
+  "documenti",
+  "section_break_audit",
+  "error_message",
+  "audit_trail"
+ ],
+ "fields": [
+  {
+   "fieldname": "certificate",
+   "fieldtype": "Link",
+   "label": "Certificato firma",
+   "options": "OpenApi Signature Certificate",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Cliente",
+   "options": "Customer",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Customer su cui addebitare il costo. Optional (impostato dal consumer)."
+  },
+  {
+   "fieldname": "consumer_app",
+   "fieldtype": "Data",
+   "label": "App consumer",
+   "in_standard_filter": 1,
+   "description": "App che ha originato la richiesta (es. garemed, daeok)."
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "bozza",
+   "fieldname": "stato",
+   "fieldtype": "Select",
+   "label": "Stato",
+   "options": "bozza\notp_inviato\nfirma_in_corso\ncompletata\nscaduta\nerrore\nannullata",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "reqd": 1
+  },
+  {
+   "default": "pades",
+   "fieldname": "signature_type",
+   "fieldtype": "Select",
+   "label": "Tipo firma",
+   "options": "pades\ncades\nxades",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "with_timestamp",
+   "fieldtype": "Check",
+   "label": "Marca temporale",
+   "description": "Apponi marca temporale ad ogni documento."
+  },
+  {
+   "fieldname": "section_break_openapi",
+   "fieldtype": "Section Break",
+   "label": "OpenAPI"
+  },
+  {
+   "fieldname": "openapi_signature_id",
+   "fieldtype": "Data",
+   "label": "OpenAPI Signature ID",
+   "read_only": 1,
+   "description": "ID della sessione di firma su OpenAPI eSignature."
+  },
+  {
+   "fieldname": "otp_destination_masked",
+   "fieldtype": "Data",
+   "label": "Destinazione OTP",
+   "read_only": 1,
+   "description": "Destinazione OTP mascherata (es. +39 ***-***-7890)."
+  },
+  {
+   "fieldname": "otp_expires_at",
+   "fieldtype": "Datetime",
+   "label": "OTP scade alle",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_openapi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "costo_eur",
+   "fieldtype": "Currency",
+   "label": "Costo totale (EUR)",
+   "options": "EUR",
+   "read_only": 1
+  },
+  {
+   "fieldname": "richiesta_at",
+   "fieldtype": "Datetime",
+   "label": "Richiesta inviata",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completata_at",
+   "fieldtype": "Datetime",
+   "label": "Completata il",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_docs",
+   "fieldtype": "Section Break",
+   "label": "Documenti"
+  },
+  {
+   "fieldname": "documenti",
+   "fieldtype": "Table",
+   "label": "Documenti",
+   "options": "OpenApi Signature Request Document",
+   "reqd": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_audit",
+   "fieldtype": "Section Break",
+   "label": "Audit e diagnostica"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Messaggio errore",
+   "read_only": 1
+  },
+  {
+   "fieldname": "audit_trail",
+   "fieldtype": "Code",
+   "options": "JSON",
+   "label": "Audit trail OpenAPI",
+   "read_only": 1,
+   "description": "Audit trail completo restituito da OpenAPI per la sessione di firma."
+  }
+ ],
+ "modified": "2026-05-13 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "OpenApi",
+ "name": "OpenApi Signature Request",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "GareMed Org Admin"
+  },
+  {
+   "read": 1,
+   "role": "GareMed User"
+  },
+  {
+   "read": 1,
+   "role": "Licita Customer"
+  }
+ ],
+ "sort_field": "richiesta_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
