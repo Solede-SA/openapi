@@ -18,22 +18,22 @@
   {"hidden":0,"is_query_report":0,"label":"OpenApi Services","link_count":0,"link_to":"OpenApi Services","link_type":"DocType","onboard":0,"type":"Link"},
 
   {"hidden":0,"is_query_report":0,"label":"Firma elettronica","link_count":3,"link_type":"DocType","onboard":0,"type":"Card Break"},
-  {"hidden":0,"is_query_report":0,"label":"Impostazioni firma","link_count":0,"link_to":"OpenApi Signature Settings","link_type":"DocType","onboard":0,"type":"Link"},
-  {"hidden":0,"is_query_report":0,"label":"Certificati firma","link_count":0,"link_to":"OpenApi Signature Certificate","link_type":"DocType","onboard":0,"type":"Link"},
-  {"hidden":0,"is_query_report":0,"label":"Sessioni di firma","link_count":0,"link_to":"OpenApi Signature Request","link_type":"DocType","onboard":0,"type":"Link"},
+  {"hidden":0,"is_query_report":0,"label":"OpenApi Signature Settings","link_count":0,"link_to":"OpenApi Signature Settings","link_type":"DocType","onboard":0,"type":"Link"},
+  {"hidden":0,"is_query_report":0,"label":"OpenApi Signature Certificate","link_count":0,"link_to":"OpenApi Signature Certificate","link_type":"DocType","onboard":0,"type":"Link"},
+  {"hidden":0,"is_query_report":0,"label":"OpenApi Signature Request","link_count":0,"link_to":"OpenApi Signature Request","link_type":"DocType","onboard":0,"type":"Link"},
 
   {"hidden":0,"is_query_report":0,"label":"Documenti aziendali (Docuengine)","link_count":3,"link_type":"DocType","onboard":0,"type":"Card Break"},
   {"hidden":0,"is_query_report":0,"label":"Docuengine Settings","link_count":0,"link_to":"Docuengine Settings","link_type":"DocType","onboard":0,"type":"Link"},
-  {"hidden":0,"is_query_report":0,"label":"Richieste documenti","link_count":0,"link_to":"Docuengine Pending Request","link_type":"DocType","onboard":0,"type":"Link"},
-  {"hidden":0,"is_query_report":0,"label":"Listino documenti","link_count":0,"link_to":"Docuengine Document Price","link_type":"DocType","onboard":0,"type":"Link"},
+  {"hidden":0,"is_query_report":0,"label":"Docuengine Pending Request","link_count":0,"link_to":"Docuengine Pending Request","link_type":"DocType","onboard":0,"type":"Link"},
+  {"hidden":0,"is_query_report":0,"label":"Docuengine Document Price","link_count":0,"link_to":"Docuengine Document Price","link_type":"DocType","onboard":0,"type":"Link"},
 
   {"hidden":0,"is_query_report":0,"label":"Fattura elettronica & Marca temporale","link_count":4,"link_type":"DocType","onboard":0,"type":"Card Break"},
   {"hidden":0,"is_query_report":0,"label":"Configurazione Fattura SDI","link_count":0,"link_to":"Configurazione Fattura SDI","link_type":"DocType","onboard":0,"type":"Link"},
   {"hidden":0,"is_query_report":0,"label":"SDI Webhook Log","link_count":0,"link_to":"SDI Webhook Log","link_type":"DocType","onboard":0,"type":"Link"},
-  {"hidden":0,"is_query_report":0,"label":"Webhook OpenAPI","link_count":0,"link_to":"OpenApi Webhook","link_type":"DocType","onboard":0,"type":"Link"},
-  {"hidden":0,"is_query_report":0,"label":"Marca temporale","link_count":0,"link_to":"OpenApi Marca Temporale Settings","link_type":"DocType","onboard":0,"type":"Link"}
+  {"hidden":0,"is_query_report":0,"label":"OpenApi Webhook","link_count":0,"link_to":"OpenApi Webhook","link_type":"DocType","onboard":0,"type":"Link"},
+  {"hidden":0,"is_query_report":0,"label":"OpenApi Marca Temporale Settings","link_count":0,"link_to":"OpenApi Marca Temporale Settings","link_type":"DocType","onboard":0,"type":"Link"}
  ],
- "modified": "2026-05-13 19:00:00.000000",
+ "modified": "2026-05-13 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Openapi",
  "name": "Openapi",
@@ -46,12 +46,12 @@
  "sequence_id": 18.0,
  "shortcuts": [
   {"color":"Gray","doc_view":"","label":"OpenApi Services","link_to":"OpenApi Services","stats_filter":"[]","type":"DocType"},
-  {"color":"Purple","doc_view":"List","label":"Certificati firma","link_to":"OpenApi Signature Certificate","stats_filter":"[]","type":"DocType"},
-  {"color":"Gray","doc_view":"","label":"Impostazioni firma","link_to":"OpenApi Signature Settings","stats_filter":"[]","type":"DocType"},
-  {"color":"Blue","doc_view":"List","label":"Richieste Docuengine","link_to":"Docuengine Pending Request","stats_filter":"[]","type":"DocType"},
+  {"color":"Purple","doc_view":"List","label":"OpenApi Signature Certificate","link_to":"OpenApi Signature Certificate","stats_filter":"[]","type":"DocType"},
+  {"color":"Gray","doc_view":"","label":"OpenApi Signature Settings","link_to":"OpenApi Signature Settings","stats_filter":"[]","type":"DocType"},
+  {"color":"Blue","doc_view":"List","label":"Docuengine Pending Request","link_to":"Docuengine Pending Request","stats_filter":"[]","type":"DocType"},
   {"color":"Gray","doc_view":"","label":"Docuengine Settings","link_to":"Docuengine Settings","stats_filter":"[]","type":"DocType"},
   {"color":"Yellow","doc_view":"","label":"Configurazione Fattura SDI","link_to":"Configurazione Fattura SDI","stats_filter":"[]","type":"DocType"},
-  {"color":"Cyan","doc_view":"","label":"Marca temporale","link_to":"OpenApi Marca Temporale Settings","stats_filter":"[]","type":"DocType"}
+  {"color":"Cyan","doc_view":"","label":"OpenApi Marca Temporale Settings","link_to":"OpenApi Marca Temporale Settings","stats_filter":"[]","type":"DocType"}
  ],
  "title": "OpenAPI"
 }
