@@ -38,16 +38,16 @@
    "fieldtype": "Currency",
    "label": "Costo emissione certificato Namirial OTP (EUR)",
    "options": "EUR",
-   "default": 137,
-   "description": "Costo netto fornitore una tantum per emissione certificato Namirial OTP, validità 3 anni."
+   "default": 29,
+   "description": "Costo netto fornitore una tantum per emissione certificato Namirial OTP, validità 3 anni. NON confondere con Cert Namirial Automatic (137€)."
   },
   {
    "fieldname": "firma_per_doc_eur",
    "fieldtype": "Currency",
    "label": "Costo per firma documento (EUR)",
    "options": "EUR",
-   "default": 0.05,
-   "description": "Costo netto fornitore per ogni documento firmato in un batch."
+   "default": 0.025,
+   "description": "Costo netto fornitore per ogni documento firmato via POST /EU-QES_otp (top-up). Abbonamento alto: 0.0065€."
   },
   {
    "fieldname": "timestamp_eur",
@@ -62,8 +62,8 @@
    "fieldtype": "Currency",
    "label": "Costo verifica firma esterna (EUR)",
    "options": "EUR",
-   "default": 0.10,
-   "description": "Costo netto fornitore per validazione di un file firmato offline."
+   "default": 0.001,
+   "description": "Costo netto fornitore per validazione firma esterna oltre i 10 al giorno gratuiti."
   }
  ],
  "modified": "2026-05-13 12:00:00.000000",

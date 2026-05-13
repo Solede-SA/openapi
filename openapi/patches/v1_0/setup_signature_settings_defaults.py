@@ -10,10 +10,11 @@ import frappe
 
 
 DEFAULTS = {
-	"cert_namirial_otp_eur": 137,
-	"firma_per_doc_eur": 0.05,
-	"timestamp_eur": 0.15,
-	"verify_eur": 0.10,
+	# Listino top-up consultabile su https://console.openapi.com/it/apis/esignature/pricing
+	"cert_namirial_otp_eur": 29,       # Cert Namirial OTP 3 anni (non confondere con Automatic = 137€)
+	"firma_per_doc_eur": 0.025,        # POST /EU-QES_otp top-up (abbonamento 0,0065€)
+	"timestamp_eur": 0.15,             # marca temporale
+	"verify_eur": 0.001,               # POST /verify oltre i 10/giorno gratuiti
 }
 
 

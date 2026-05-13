@@ -3,24 +3,23 @@
  "creation": "2026-05-13 12:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
- "autoname": "format:OASC-.{YY}.-.######",
+ "autoname": "format:OASC-.YY.-.######",
  "field_order": [
   "customer",
   "provider",
   "column_break_main",
   "stato",
   "openapi_certificate_id",
-  "section_break_anagrafica",
-  "nome",
-  "cognome",
-  "codice_fiscale",
-  "data_nascita",
-  "column_break_anagrafica",
-  "comune_nascita",
-  "provincia_nascita",
-  "section_break_contatti",
+  "section_break_identity",
+  "certificate_owner_display",
+  "custom_reference",
+  "column_break_identity",
   "email_otp",
   "telefono_otp",
+  "section_break_credentials",
+  "certificate_username",
+  "certificate_password",
+  "certificate_credentials_received_at",
   "section_break_date",
   "data_emissione",
   "data_scadenza",
@@ -29,9 +28,17 @@
   "completed_at",
   "last_poll_at",
   "section_break_identification",
-  "identification_url",
+  "certificate_link",
   "cn_certificato",
   "costo_eur",
+  "section_break_anagrafica_optional",
+  "nome",
+  "cognome",
+  "codice_fiscale",
+  "data_nascita",
+  "column_break_anagrafica",
+  "comune_nascita",
+  "provincia_nascita",
   "section_break_diagnostics",
   "error_message",
   "raw_response"
@@ -65,7 +72,7 @@
    "fieldname": "stato",
    "fieldtype": "Select",
    "label": "Stato",
-   "options": "pending\nin_attesa_identificazione\nattivo\nscaduto\nrevocato\nrifiutato\nerrore",
+   "options": "pending\nin_attesa_identificazione\nin_attesa_credenziali\nattivo\nscaduto\nrevocato\nrifiutato\nerrore",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "reqd": 1
@@ -80,70 +87,63 @@
    "description": "ID del certificato ritornato da OpenAPI eSignature."
   },
   {
-   "fieldname": "section_break_anagrafica",
+   "fieldname": "section_break_identity",
    "fieldtype": "Section Break",
-   "label": "Anagrafica firmatario"
+   "label": "Identità firmatario"
   },
   {
-   "fieldname": "nome",
+   "fieldname": "certificate_owner_display",
    "fieldtype": "Data",
-   "label": "Nome",
-   "reqd": 1
+   "label": "Intestatario certificato",
+   "in_list_view": 1,
+   "description": "Stringa display inviata a Namirial come certificateOwner (es. 'Mario Rossi')."
   },
   {
-   "fieldname": "cognome",
+   "fieldname": "custom_reference",
    "fieldtype": "Data",
-   "label": "Cognome",
-   "reqd": 1
+   "label": "Riferimento interno",
+   "description": "Identificativo del consumer (es. name della Persona Cliente)."
   },
   {
-   "fieldname": "codice_fiscale",
-   "fieldtype": "Data",
-   "label": "Codice fiscale",
-   "reqd": 1,
-   "in_standard_filter": 1,
-   "description": "16 caratteri."
-  },
-  {
-   "fieldname": "data_nascita",
-   "fieldtype": "Date",
-   "label": "Data di nascita",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_anagrafica",
+   "fieldname": "column_break_identity",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "comune_nascita",
-   "fieldtype": "Data",
-   "label": "Comune di nascita",
-   "reqd": 1
-  },
-  {
-   "fieldname": "provincia_nascita",
-   "fieldtype": "Data",
-   "label": "Provincia di nascita",
-   "reqd": 1,
-   "description": "Sigla 2 lettere (es. MI, RM, NA)."
-  },
-  {
-   "fieldname": "section_break_contatti",
-   "fieldtype": "Section Break",
-   "label": "Contatti per OTP"
   },
   {
    "fieldname": "email_otp",
    "fieldtype": "Data",
-   "label": "Email per OTP",
-   "reqd": 1
+   "label": "Email firmatario",
+   "description": "Per notifiche del consumer. Non inviata a Namirial."
   },
   {
    "fieldname": "telefono_otp",
    "fieldtype": "Data",
-   "label": "Telefono per OTP",
-   "reqd": 1,
-   "description": "Numero su cui Namirial invia l'OTP per ogni firma."
+   "label": "Telefono firmatario",
+   "description": "Per notifiche del consumer. Non inviata a Namirial."
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_credentials",
+   "fieldtype": "Section Break",
+   "label": "Credenziali certificato (post-KYC)"
+  },
+  {
+   "fieldname": "certificate_username",
+   "fieldtype": "Data",
+   "label": "Certificate Username",
+   "description": "Identificativo univoco device ricevuto via PDF Namirial dopo il video-riconoscimento (es. 'RHI...').",
+   "read_only": 1
+  },
+  {
+   "fieldname": "certificate_password",
+   "fieldtype": "Password",
+   "label": "Certificate Password",
+   "description": "Password device ricevuta via SMS Namirial dopo il video-riconoscimento. Auto-cifrata da Frappe."
+  },
+  {
+   "fieldname": "certificate_credentials_received_at",
+   "fieldtype": "Datetime",
+   "label": "Credenziali registrate",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_date",
@@ -188,14 +188,14 @@
   {
    "fieldname": "section_break_identification",
    "fieldtype": "Section Break",
-   "label": "Identificazione e audit"
+   "label": "Video-identificazione e audit"
   },
   {
-   "fieldname": "identification_url",
+   "fieldname": "certificate_link",
    "fieldtype": "Small Text",
-   "label": "URL video-identificazione Namirial",
+   "label": "Link video-identificazione",
    "read_only": 1,
-   "description": "Link da inviare al firmatario per completare il video-riconoscimento."
+   "description": "Link Namirial da inviare al firmatario per completare il video-riconoscimento."
   },
   {
    "fieldname": "cn_certificato",
@@ -210,6 +210,48 @@
    "label": "Costo (EUR)",
    "options": "EUR",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_anagrafica_optional",
+   "fieldtype": "Section Break",
+   "label": "Anagrafica (opzionale, riferimento interno)"
+  },
+  {
+   "fieldname": "nome",
+   "fieldtype": "Data",
+   "label": "Nome"
+  },
+  {
+   "fieldname": "cognome",
+   "fieldtype": "Data",
+   "label": "Cognome"
+  },
+  {
+   "fieldname": "codice_fiscale",
+   "fieldtype": "Data",
+   "label": "Codice fiscale",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "data_nascita",
+   "fieldtype": "Date",
+   "label": "Data di nascita"
+  },
+  {
+   "fieldname": "column_break_anagrafica",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "comune_nascita",
+   "fieldtype": "Data",
+   "label": "Comune di nascita"
+  },
+  {
+   "fieldname": "provincia_nascita",
+   "fieldtype": "Data",
+   "label": "Provincia di nascita",
+   "description": "Sigla 2 lettere (es. MI, RM, NA)."
   },
   {
    "collapsible": 1,
@@ -231,7 +273,7 @@
    "read_only": 1
   }
  ],
- "modified": "2026-05-13 12:00:00.000000",
+ "modified": "2026-05-13 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "OpenApi",
  "name": "OpenApi Signature Certificate",

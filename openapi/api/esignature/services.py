@@ -10,6 +10,18 @@ callback opzionali:
                  signed_bytes, signer_cn, cert_expires_at, signature_id)
                                                   — invocata per ogni file firmato
 
+Flow OTP reale (schema OAS):
+  1. start_namirial_onboarding → POST /certificates/namirial-otp con solo
+     certificateOwner + customReference. Risposta: id + certificateLink + state=NEW.
+  2. Cliente apre certificateLink, completa video-ID Namirial, riceve via PDF + SMS:
+     certificateUsername (RHI...) + certificatePassword.
+  3. save_certificate_credentials → cliente inserisce username + password nel
+     wizard onboarding step 4. Salvati in Password fieldtype (cifrato).
+  4. poll_pending_certificates (cron) → quando state passa a DONE → "attivo".
+  5. sign_batch_sincrono → chiama POST /EU-QES_otp con OTP (da app mobile) +
+     username/password salvate + documenti base64. Risposta sincrona, scarica file
+     firmati, invoca on_signed_file per ogni doc.
+
 Nessun fallback: se un parametro mancante o un endpoint OpenAPI fallisce, frappe.throw
 con messaggio diagnostico.
 """
@@ -49,32 +61,53 @@ def get_costo(key: str) -> float:
 	return float(value)
 
 
-# --- Helper anagrafica → payload Namirial --------------------------------
+# --- State mapping (OAS → interno) ----------------------------------------
 
-_REQUIRED_PAYLOAD_KEYS = (
-	"nome", "cognome", "codice_fiscale", "data_nascita",
-	"comune_nascita", "provincia_nascita", "email_otp", "telefono_otp",
-)
+def _map_cert_state(raw: str | None, has_credentials: bool = False) -> str:
+	"""Mappa state OAS Namirial sul nostro enum interno.
+
+	OAS: NEW | REGISTERING | WORKING | DONE | SUSPENDED | EXPIRED | CANCELLED
+	Interno: pending | in_attesa_identificazione | in_attesa_credenziali | attivo |
+	         scaduto | revocato | rifiutato | errore
+
+	Logica:
+	- DONE: il certificato è emesso → 'in_attesa_credenziali' finché il cliente non
+	  ha inserito certificate_username/password, poi 'attivo'.
+	- NEW/REGISTERING/WORKING: in attesa video-ID Namirial.
+	- EXPIRED: scaduto. SUSPENDED: revocato. CANCELLED: rifiutato.
+	"""
+	if not raw:
+		return "pending"
+	s = raw.upper().strip()
+	if s in esign_client.CERT_STATE_ACTIVE:
+		return "attivo" if has_credentials else "in_attesa_credenziali"
+	if s in esign_client.CERT_STATE_EXPIRED:
+		return "scaduto"
+	if s in esign_client.CERT_STATE_SUSPENDED:
+		return "revocato"
+	if s in esign_client.CERT_STATE_CANCELLED:
+		return "rifiutato"
+	if s in esign_client.CERT_STATE_PENDING:
+		return "in_attesa_identificazione"
+	return "pending"
 
 
-def _validate_onboarding_payload(payload: dict) -> None:
-	missing = [k for k in _REQUIRED_PAYLOAD_KEYS if not payload.get(k)]
-	if missing:
-		frappe.throw(f"Payload onboarding firma incompleto: campi mancanti {missing}")
+def _map_sign_state(raw: str | None) -> str:
+	"""Mappa state firma OAS sul nostro enum interno.
 
-
-def _build_namirial_request(payload: dict) -> dict:
-	"""Costruisce il body POST /certificates/namirial-otp dalla forma normalizzata."""
-	return {
-		"firstName": payload["nome"],
-		"lastName": payload["cognome"],
-		"taxCode": payload["codice_fiscale"],
-		"dateOfBirth": str(payload["data_nascita"]),
-		"placeOfBirth": payload["comune_nascita"],
-		"provinceOfBirth": payload["provincia_nascita"],
-		"email": payload["email_otp"],
-		"phoneNumber": payload["telefono_otp"],
-	}
+	OAS: WAIT_VALIDATION | WAIT_SIGN | WAIT_SIGNER | DONE | ERROR
+	Interno: bozza | in_corso | completata | errore | annullata
+	"""
+	if not raw:
+		return "bozza"
+	s = raw.upper().strip()
+	if s in esign_client.SIGN_STATE_DONE:
+		return "completata"
+	if s in esign_client.SIGN_STATE_ERROR:
+		return "errore"
+	if s in esign_client.SIGN_STATE_PENDING:
+		return "in_corso"
+	return "bozza"
 
 
 # --- Onboarding certificato ----------------------------------------------
@@ -84,29 +117,34 @@ def start_namirial_onboarding(*, payload: dict, customer: str | None = None,
                               consumer_app: str = "openapi") -> "frappe.Document":
 	"""Avvia onboarding certificato Namirial OTP.
 
+	payload (dict) deve contenere:
+	  - certificate_owner (str, obbligatorio): "Nome Cognome" display
+	  - custom_reference (str, opzionale): nostro identificativo interno
+	  - email_otp (str, opzionale): per nostre notifiche, non inviato a Namirial
+	  - telefono_otp (str, opzionale): idem
+
 	Step:
-	  1. valida payload anagrafico + contatti
-	  2. POST /certificates/namirial-otp
-	  3. crea OpenApi Signature Certificate (stato=in_attesa_identificazione)
-	  4. addebita on_charge se fornito
+	  1. POST /certificates/namirial-otp con solo certificateOwner + customReference
+	  2. Crea OpenApi Signature Certificate (stato='in_attesa_identificazione')
+	  3. Addebita on_charge se fornito
 
 	Ritorna il documento `OpenApi Signature Certificate` creato.
 	"""
-	_validate_onboarding_payload(payload)
+	certificate_owner = (payload.get("certificate_owner") or "").strip()
+	if not certificate_owner:
+		frappe.throw("payload.certificate_owner obbligatorio")
+	custom_reference = (payload.get("custom_reference") or "").strip() or None
 
-	request_body = _build_namirial_request(payload)
-	response = esign_client.create_namirial_otp_certificate(request_body)
+	response = esign_client.create_namirial_otp_certificate(
+		certificate_owner=certificate_owner,
+		custom_reference=custom_reference,
+	)
 
 	openapi_cert_id = response.get("id") or response.get("certificateId")
 	if not openapi_cert_id:
-		frappe.throw(
-			f"OpenAPI eSignature non ha restituito un certificateId. Body: {response}"
-		)
-	identification_url = (
-		response.get("identificationUrl")
-		or response.get("identification_url")
-		or response.get("verifyUrl")
-	)
+		frappe.throw(f"OpenAPI eSignature non ha restituito un certificateId. Body: {response}")
+	certificate_link = response.get("certificateLink") or response.get("certificate_link")
+	api_state = response.get("state") or "NEW"
 
 	cost = get_costo("cert_namirial_otp_eur")
 
@@ -115,16 +153,12 @@ def start_namirial_onboarding(*, payload: dict, customer: str | None = None,
 		"customer": customer,
 		"provider": "namirial_otp",
 		"openapi_certificate_id": openapi_cert_id,
-		"stato": "in_attesa_identificazione",
-		"nome": payload["nome"],
-		"cognome": payload["cognome"],
-		"codice_fiscale": payload["codice_fiscale"],
-		"data_nascita": payload["data_nascita"],
-		"comune_nascita": payload["comune_nascita"],
-		"provincia_nascita": payload["provincia_nascita"],
-		"email_otp": payload["email_otp"],
-		"telefono_otp": payload["telefono_otp"],
-		"identification_url": identification_url,
+		"stato": _map_cert_state(api_state, has_credentials=False),
+		"certificate_owner_display": certificate_owner,
+		"custom_reference": custom_reference,
+		"email_otp": payload.get("email_otp"),
+		"telefono_otp": payload.get("telefono_otp"),
+		"certificate_link": certificate_link,
 		"costo_eur": cost,
 		"submitted_at": now_datetime(),
 		"raw_response": json.dumps(response, default=str, ensure_ascii=False),
@@ -149,20 +183,26 @@ def refresh_certificate(certificate_name: str) -> dict:
 		frappe.throw(f"Certificato {certificate_name} senza openapi_certificate_id")
 
 	data = esign_client.get_certificate(cert.openapi_certificate_id)
-	new_stato = _normalize_cert_state(data.get("status") or data.get("state"))
-	issued_at = data.get("issuedAt") or data.get("issued_at") or data.get("createdAt")
-	expires_at = data.get("expiresAt") or data.get("expires_at") or data.get("expiryDate")
-	cn = data.get("commonName") or data.get("cn") or data.get("subjectCN")
+	api_state = data.get("state") or "NEW"
+	created_at = data.get("createdAt") or data.get("created_at")
+	expire_at = data.get("expireAt") or data.get("expire_at")
+	# Il CN non è sempre presente in /certificates/{id} — lo riprendiamo dall'audit
+	# di una signature quando disponibile. Lo lasciamo opzionale qui.
 
-	cert.stato = new_stato
-	if issued_at and not cert.data_emissione:
-		cert.data_emissione = getdate(issued_at)
-	if expires_at:
-		cert.data_scadenza = getdate(expires_at)
-	if cn:
-		cert.cn_certificato = cn
+	has_credentials = bool(cert.certificate_username and cert.get_password("certificate_password", raise_exception=False))
+	cert.stato = _map_cert_state(api_state, has_credentials=has_credentials)
+	if created_at and not cert.data_emissione:
+		try:
+			cert.data_emissione = getdate(created_at)
+		except Exception:
+			pass
+	if expire_at:
+		try:
+			cert.data_scadenza = getdate(expire_at)
+		except Exception:
+			pass
 	cert.last_poll_at = now_datetime()
-	if new_stato == "attivo" and not cert.completed_at:
+	if cert.stato == "attivo" and not cert.completed_at:
 		cert.completed_at = now_datetime()
 	cert.raw_response = json.dumps(data, default=str, ensure_ascii=False)
 	cert.flags.ignore_permissions = True
@@ -173,34 +213,42 @@ def refresh_certificate(certificate_name: str) -> dict:
 		"data_emissione": str(cert.data_emissione) if cert.data_emissione else None,
 		"data_scadenza": str(cert.data_scadenza) if cert.data_scadenza else None,
 		"cn_certificato": cert.cn_certificato,
+		"api_state": api_state,
 	}
 
 
-def _normalize_cert_state(raw: str | None) -> str:
-	if not raw:
-		return "pending"
-	s = raw.lower().strip()
-	if s in esign_client.CERT_ACTIVE_STATES:
-		return "attivo"
-	if s in {"expired", "scaduto"}:
-		return "scaduto"
-	if s in {"revoked", "revocato"}:
-		return "revocato"
-	if s in {"rejected", "rifiutato"}:
-		return "rifiutato"
-	if s in esign_client.CERT_PENDING_STATES:
-		return "in_attesa_identificazione"
-	if s in {"error", "failed", "errore"}:
-		return "errore"
-	return "in_attesa_identificazione"
+def save_certificate_credentials(certificate_name: str, username: str, password: str) -> dict:
+	"""Salva username (RHI...) + password ricevuti dal firmatario post-KYC.
+
+	Le credenziali vanno cifrate via Frappe Password fieldtype (auto-encrypt).
+	Aggiorna anche stato a 'attivo' se il certificato è DONE su OpenAPI.
+	"""
+	if not username or not password:
+		frappe.throw("certificate_username e certificate_password obbligatori")
+	cert = frappe.get_doc("OpenApi Signature Certificate", certificate_name)
+	cert.certificate_username = username.strip()
+	cert.certificate_password = password  # Password fieldtype → cifrato automaticamente
+	cert.certificate_credentials_received_at = now_datetime()
+	# Se il cert è già DONE su OpenAPI, ora che abbiamo le credenziali può passare ad attivo
+	if cert.stato == "in_attesa_credenziali":
+		cert.stato = "attivo"
+		if not cert.completed_at:
+			cert.completed_at = now_datetime()
+	cert.flags.ignore_permissions = True
+	cert.save()
+	return {
+		"certificate": cert.name,
+		"stato": cert.stato,
+		"certificate_username": cert.certificate_username,
+	}
 
 
 def poll_pending_certificates() -> dict:
-	"""Cron: refresh stato per certificati in attesa o pending.
+	"""Cron: refresh stato per certificati in attesa.
 
 	Schedulato ogni 30 minuti (vedi hooks.py).
 	"""
-	pending_states = ("pending", "in_attesa_identificazione")
+	pending_states = ("pending", "in_attesa_identificazione", "in_attesa_credenziali")
 	candidates = frappe.get_all(
 		"OpenApi Signature Certificate",
 		filters={"stato": ["in", pending_states]},
@@ -219,13 +267,24 @@ def poll_pending_certificates() -> dict:
 	return {"checked": len(candidates), "updated": updated}
 
 
-# --- Firma batch ----------------------------------------------------------
+# --- Firma batch sincrona -------------------------------------------------
 
-def _validate_certificate_active(cert: "frappe.Document") -> None:
+def _validate_certificate_ready_to_sign(cert: "frappe.Document") -> None:
 	if cert.stato != "attivo":
 		frappe.throw(
 			f"Certificato {cert.name} non attivo (stato={cert.stato}). "
-			f"Completa l'identificazione prima di firmare."
+			f"Completa l'identificazione video Namirial e l'inserimento delle credenziali."
+		)
+	if not cert.certificate_username:
+		frappe.throw(
+			f"Certificato {cert.name} senza certificate_username. "
+			f"Inserisci le credenziali ricevute via PDF Namirial."
+		)
+	password = cert.get_password("certificate_password", raise_exception=False)
+	if not password:
+		frappe.throw(
+			f"Certificato {cert.name} senza certificate_password. "
+			f"Inserisci la password ricevuta via SMS Namirial."
 		)
 	if cert.data_scadenza and getdate(cert.data_scadenza) < getdate(add_days(today(), 7)):
 		frappe.throw(
@@ -238,38 +297,40 @@ def _md5_of(blob: bytes) -> str:
 	return hashlib.md5(blob).hexdigest()
 
 
-def _mask_destination(raw: str | None) -> str:
-	if not raw:
-		return ""
-	if "@" in raw:
-		left, _, domain = raw.partition("@")
-		return f"{left[:2]}***@{domain}"
-	if len(raw) >= 4:
-		return f"{raw[:3]}***{raw[-2:]}"
-	return "***"
+def sign_batch_sincrono(*, certificate_name: str, certificate_otp: str,
+                        documents: list[dict],
+                        signature_type: str = "pades",
+                        with_timestamp: bool = False,
+                        certificate_id_otp: int = -1,
+                        customer: str | None = None,
+                        on_charge: Callable[[float, str], None] | None = None,
+                        on_refund: Callable[[float, str], None] | None = None,
+                        on_signed_file: Callable | None = None,
+                        consumer_app: str = "openapi") -> "frappe.Document":
+	"""Firma N documenti in batch sincrono.
 
+	documents: lista di dict con chiavi {reference_doctype, reference_name, filename, file_bytes}.
+	certificate_otp: codice TOTP a 6 cifre dall'app Namirial Sign mobile del firmatario.
 
-def start_sign_batch(*, certificate_name: str, documents: list[dict],
-                     signature_type: str = "pades",
-                     with_timestamp: bool = False,
-                     customer: str | None = None,
-                     on_charge: Callable[[float, str], None] | None = None,
-                     consumer_app: str = "openapi") -> "frappe.Document":
-	"""Crea sessione di firma batch e invia OTP al firmatario.
+	Flow:
+	  1. Valida certificato (stato attivo, credenziali salvate, non scaduto)
+	  2. Carica certificate_password (decifrata) dal DocType
+	  3. POST /EU-QES_otp sincrono con base64 dei file
+	  4. Se DONE: download signed document, abbina alle child row, chiama on_signed_file
+	  5. Se ERROR: stato='errore', on_refund
 
-	documents: lista di dict con chiavi
-	  - reference_doctype (str, opzionale)
-	  - reference_name (str, opzionale)
-	  - filename (str)
-	  - file_bytes (bytes)
+	Ritorna OpenApi Signature Request completata (o errore).
 	"""
 	if not documents:
 		frappe.throw("Nessun documento da firmare")
 	if len(documents) > 50:
 		frappe.throw("Massimo 50 documenti per batch")
+	if not certificate_otp or len(certificate_otp.strip()) < 4:
+		frappe.throw("OTP non valido. Apri l'app Namirial Sign sul telefono e inserisci il codice corrente.")
 
 	cert = frappe.get_doc("OpenApi Signature Certificate", certificate_name)
-	_validate_certificate_active(cert)
+	_validate_certificate_ready_to_sign(cert)
+	cert_password = cert.get_password("certificate_password")
 
 	prepared_files = []
 	for d in documents:
@@ -277,8 +338,8 @@ def start_sign_batch(*, certificate_name: str, documents: list[dict],
 		if not isinstance(blob, (bytes, bytearray)):
 			frappe.throw(f"file_bytes deve essere bytes per documento {d.get('filename')}")
 		prepared_files.append({
-			"fileName": d["filename"],
-			"content": base64.b64encode(blob).decode("ascii"),
+			"filename": d["filename"],
+			"payload_b64": base64.b64encode(blob).decode("ascii"),
 			"md5": _md5_of(blob),
 			"reference_doctype": d.get("reference_doctype"),
 			"reference_name": d.get("reference_name"),
@@ -288,19 +349,7 @@ def start_sign_batch(*, certificate_name: str, documents: list[dict],
 	costo_timestamp = get_costo("timestamp_eur") * len(prepared_files) if with_timestamp else 0
 	totale = costo_firma + costo_timestamp
 
-	response = esign_client.submit_qes_otp_batch(
-		certificate_id=cert.openapi_certificate_id,
-		files=[{"fileName": f["fileName"], "content": f["content"]} for f in prepared_files],
-		signature_type=signature_type,
-		with_timestamp=with_timestamp,
-	)
-
-	signature_id = response.get("id") or response.get("signatureId")
-	if not signature_id:
-		frappe.throw(f"OpenAPI eSignature non ha restituito un signatureId. Body: {response}")
-	otp_destination = response.get("otpDestination") or response.get("otp_destination")
-	otp_expires_at = response.get("otpExpiresAt") or response.get("otp_expires_at")
-
+	# Crea la Request PRIMA della call API per tracciare anche errori
 	req = frappe.get_doc({
 		"doctype": "OpenApi Signature Request",
 		"certificate": cert.name,
@@ -308,15 +357,12 @@ def start_sign_batch(*, certificate_name: str, documents: list[dict],
 		"consumer_app": consumer_app,
 		"signature_type": signature_type,
 		"with_timestamp": 1 if with_timestamp else 0,
-		"stato": "otp_inviato",
-		"openapi_signature_id": signature_id,
-		"otp_destination_masked": _mask_destination(otp_destination),
-		"otp_expires_at": get_datetime(otp_expires_at) if otp_expires_at else None,
+		"stato": "in_corso",
 		"costo_eur": totale,
 		"richiesta_at": now_datetime(),
 		"documenti": [
 			{
-				"nome_file_originale": f["fileName"],
+				"nome_file_originale": f["filename"],
 				"md5_originale": f["md5"],
 				"reference_doctype": f["reference_doctype"],
 				"reference_name": f["reference_name"],
@@ -326,114 +372,146 @@ def start_sign_batch(*, certificate_name: str, documents: list[dict],
 	})
 	req.flags.ignore_permissions = True
 	req.insert()
+	# Commit early in modo che la richiesta esista anche se la POST OpenAPI fallisce con timeout
+	frappe.db.commit()
 
+	# Charge wallet prima della chiamata API (refund su errore)
 	if on_charge is not None:
 		on_charge(totale, f"Firma {len(prepared_files)} documenti — sessione {req.name}")
 
-	return req
-
-
-def confirm_otp_and_complete(*, request_name: str, otp: str,
-                              on_signed_file: Callable | None = None,
-                              on_refund: Callable[[float, str], None] | None = None) -> "frappe.Document":
-	"""Conferma OTP, attende firma e invoca callback per ogni file firmato.
-
-	on_signed_file(reference_doctype, reference_name, original_filename,
-	               signed_bytes, signer_cn, cert_expires_at, signature_id)
-	"""
-	req = frappe.get_doc("OpenApi Signature Request", request_name)
-
-	if req.stato != "otp_inviato":
-		frappe.throw(
-			f"Sessione {request_name} non in stato 'otp_inviato' (corrente: {req.stato})"
-		)
-	if req.otp_expires_at and get_datetime(req.otp_expires_at) < now_datetime():
-		req.stato = "scaduta"
-		req.error_message = "OTP scaduto"
-		req.flags.ignore_permissions = True
-		req.save()
-		if on_refund is not None:
-			on_refund(float(req.costo_eur or 0), f"Refund — OTP scaduto sessione {request_name}")
-		frappe.throw("OTP scaduto. Avvia una nuova sessione di firma.")
-
-	req.stato = "firma_in_corso"
-	req.flags.ignore_permissions = True
-	req.save()
+	# Costruisci payload e chiama OpenAPI eSignature
+	input_documents = [
+		{"sourceType": "base64", "payload": f["payload_b64"]}
+		for f in prepared_files
+	]
 
 	try:
-		esign_client.confirm_otp(req.openapi_signature_id, otp)
-		final_data = esign_client.poll_signature(req.openapi_signature_id)
-		audit = esign_client.get_signature_audit(req.openapi_signature_id)
-
-		cert = frappe.get_doc("OpenApi Signature Certificate", req.certificate)
-		signer_cn = cert.cn_certificato or _extract_cn_from_audit(audit) or ""
-		cert_expires_at = cert.data_scadenza
-
-		signed_files = _extract_signed_files(req, final_data)
-
-		for row, signed_bytes in signed_files:
-			file_doc = frappe.get_doc({
-				"doctype": "File",
-				"file_name": f"signed_{row.nome_file_originale}",
-				"content": signed_bytes,
-				"is_private": 1,
-				"attached_to_doctype": "OpenApi Signature Request",
-				"attached_to_name": req.name,
-			}).insert(ignore_permissions=True)
-			row.file_firmato = file_doc.file_url
-			row.firmato_at = now_datetime()
-
-			if on_signed_file is not None and row.reference_doctype and row.reference_name:
-				on_signed_file(
-					row.reference_doctype, row.reference_name,
-					row.nome_file_originale, signed_bytes,
-					signer_cn, cert_expires_at, req.openapi_signature_id,
-				)
-
-		req.stato = "completata"
-		req.completata_at = now_datetime()
-		req.audit_trail = json.dumps({"final": final_data, "audit": audit}, default=str, ensure_ascii=False)
-		req.save()
-		return req
+		response = esign_client.submit_qes_otp(
+			certificate_username=cert.certificate_username,
+			certificate_password=cert_password,
+			certificate_otp=certificate_otp.strip(),
+			input_documents=input_documents,
+			signature_type=signature_type,
+			certificate_id_otp=certificate_id_otp,
+			with_timestamp=with_timestamp,
+			title=f"Firma {len(prepared_files)} documenti — {consumer_app}",
+		)
 	except Exception as exc:
 		req.reload()
 		req.stato = "errore"
 		req.error_message = str(exc)[:500]
 		req.save()
 		if on_refund is not None:
-			on_refund(float(req.costo_eur or 0), f"Refund — errore sessione {request_name}: {exc}")
+			on_refund(totale, f"Refund — errore firma {req.name}: {exc}")
+		# IMPORTANTE: commit DOPO on_refund, prima del raise.
+		# Il raise propaga l'eccezione fuori dall'@whitelist Frappe → auto-rollback;
+		# senza questo commit le transazioni di refund e di stato='errore' verrebbero perse.
+		frappe.db.commit()
 		raise
 
+	# Aggiorna Request con dati API
+	signature_id = response.get("id") or response.get("signatureId")
+	api_state = response.get("state") or ""
 
-def _extract_signed_files(req, final_data: dict) -> list:
-	"""Scarica i file firmati e li abbina alle child row per nome.
+	req.reload()
+	req.openapi_signature_id = signature_id
 
-	OpenAPI ritorna un singolo file se N=1, uno zip se N>1.
+	if api_state.upper() in esign_client.SIGN_STATE_PENDING:
+		# async — lasciamo in_corso, cron polling separato (raro nel MVP)
+		req.audit_trail = json.dumps(response, default=str, ensure_ascii=False)
+		req.save()
+		frappe.db.commit()
+		return req
+
+	if api_state.upper() in esign_client.SIGN_STATE_ERROR:
+		err_msg = response.get("errorMessage") or response.get("errorNumber") or "errore non specificato"
+		req.stato = "errore"
+		req.error_message = f"OpenAPI ERROR: {err_msg}"
+		req.audit_trail = json.dumps(response, default=str, ensure_ascii=False)
+		req.save()
+		if on_refund is not None:
+			on_refund(totale, f"Refund — firma fallita {req.name}: {err_msg}")
+		# Commit DOPO refund (vedi nota sopra sull'auto-rollback Frappe @whitelist).
+		frappe.db.commit()
+		frappe.throw(f"Firma rifiutata da OpenAPI: {err_msg}")
+
+	# SUCCESS sincrono (state == DONE)
+	# Download signed document(s) + audit
+	try:
+		audit = esign_client.get_signature_audit(signature_id)
+	except Exception:
+		audit = {}
+
+	signer_cn = _extract_cn(audit) or cert.cn_certificato or cert.certificate_owner_display
+
+	signed_files = _split_signed_documents(req, signature_id, signature_type)
+
+	for row, signed_bytes in signed_files:
+		file_doc = frappe.get_doc({
+			"doctype": "File",
+			"file_name": f"signed_{row.nome_file_originale}",
+			"content": signed_bytes,
+			"is_private": 1,
+			"attached_to_doctype": "OpenApi Signature Request",
+			"attached_to_name": req.name,
+		}).insert(ignore_permissions=True)
+		row.file_firmato = file_doc.file_url
+		row.firmato_at = now_datetime()
+
+		if on_signed_file is not None and row.reference_doctype and row.reference_name:
+			on_signed_file(
+				row.reference_doctype, row.reference_name,
+				row.nome_file_originale, signed_bytes,
+				signer_cn, cert.data_scadenza, signature_id,
+			)
+
+	# Aggiorna CN se ricevuto dall'audit
+	if signer_cn and not cert.cn_certificato:
+		cert.cn_certificato = signer_cn
+		cert.flags.ignore_permissions = True
+		cert.save()
+
+	req.stato = "completata"
+	req.completata_at = now_datetime()
+	req.audit_trail = json.dumps({"response": response, "audit": audit}, default=str, ensure_ascii=False)
+	req.save()
+	frappe.db.commit()
+	return req
+
+
+def _split_signed_documents(req, signature_id: str, signature_type: str) -> list:
+	"""Scarica il signed document e abbina ai child row.
+
+	OpenAPI può ritornare un singolo file (N=1) o uno zip (N>1).
+	Per PAdES singolo: PDF firmato (estensione invariata).
+	Per CAdES: .p7m envelope.
 	"""
 	import io
 	import zipfile
 
-	blob = esign_client.download_signed_document(req.openapi_signature_id)
-	rows_by_name = {row.nome_file_originale: row for row in req.documenti}
+	blob = esign_client.download_signed_document(signature_id)
 
+	if len(req.documenti) == 1:
+		return [(req.documenti[0], blob)]
+
+	rows_by_name = {row.nome_file_originale: row for row in req.documenti}
 	pairs = []
 
-	# Single-file case: una sola child row
-	if len(req.documenti) == 1:
-		row = req.documenti[0]
-		pairs.append((row, blob))
-		return pairs
-
-	# Multi-file: tentativo zip
 	try:
 		with zipfile.ZipFile(io.BytesIO(blob)) as zf:
 			for member in zf.namelist():
-				row = _match_row(member, rows_by_name)
+				row = _match_row_to_original(member, rows_by_name)
 				if row is None:
-					frappe.throw(f"File firmato '{member}' non riconducibile a nessun originale nella sessione {req.name}")
+					frappe.throw(
+						f"File firmato '{member}' non riconducibile ad alcun originale "
+						f"nella sessione {req.name}"
+					)
 				pairs.append((row, zf.read(member)))
 	except zipfile.BadZipFile:
-		frappe.throw(f"Risposta /signedDocument non è uno zip valido (atteso per batch multi-file). Sessione {req.name}.")
+		frappe.throw(
+			f"Risposta /signedDocument non è uno zip valido (atteso per batch multi-file). "
+			f"Sessione {req.name}."
+		)
 
 	if len(pairs) != len(req.documenti):
 		frappe.throw(
@@ -442,31 +520,31 @@ def _extract_signed_files(req, final_data: dict) -> list:
 	return pairs
 
 
-def _match_row(filename_in_zip: str, rows_by_name: dict):
-	"""Match per nome file firmato all'originale: OpenAPI suffissa .p7m o aggiunge prefisso 'signed_'."""
+def _match_row_to_original(filename_in_zip: str, rows_by_name: dict):
+	"""Match per nome file firmato all'originale. OpenAPI può suffissare .p7m o aggiungere
+	prefisso 'signed_'."""
 	if filename_in_zip in rows_by_name:
 		return rows_by_name[filename_in_zip]
 	for name, row in rows_by_name.items():
 		if name in filename_in_zip:
 			return row
-		# .p7m envelope
 		if filename_in_zip.endswith(".p7m") and filename_in_zip[:-4] == name:
 			return row
 	return None
 
 
-def _extract_cn_from_audit(audit: dict) -> str | None:
+def _extract_cn(audit: dict) -> str | None:
 	"""Estrae il CN del firmatario dall'audit trail OpenAPI."""
 	if not isinstance(audit, dict):
 		return None
-	for key in ("commonName", "signerCN", "subjectCN", "cn"):
+	for key in ("subjectCN", "commonName", "signerCN", "cn"):
 		if audit.get(key):
 			return audit[key]
-	signers = audit.get("signers") or audit.get("signatures")
+	signers = audit.get("signers") or audit.get("signatures") or audit.get("signatureReportList")
 	if isinstance(signers, list) and signers:
 		first = signers[0]
 		if isinstance(first, dict):
-			for key in ("commonName", "cn", "subjectCN", "signerCN"):
+			for key in ("subjectCN", "commonName", "cn", "signerCN"):
 				if first.get(key):
 					return first[key]
 	return None
@@ -479,8 +557,6 @@ def get_request_status(request_name: str) -> dict:
 		"stato": req.stato,
 		"signature_type": req.signature_type,
 		"openapi_signature_id": req.openapi_signature_id,
-		"otp_destination_masked": req.otp_destination_masked,
-		"otp_expires_at": format_datetime(req.otp_expires_at) if req.otp_expires_at else None,
 		"costo_eur": float(req.costo_eur or 0),
 		"richiesta_at": format_datetime(req.richiesta_at) if req.richiesta_at else None,
 		"completata_at": format_datetime(req.completata_at) if req.completata_at else None,
@@ -500,8 +576,12 @@ def get_request_status(request_name: str) -> dict:
 
 def cancel_request(*, request_name: str,
                     on_refund: Callable[[float, str], None] | None = None) -> None:
+	"""Annulla richiesta in stato 'in_corso' (caso raro async).
+
+	Per sincrono questo non serve: la chiamata API è già terminata al ritorno.
+	"""
 	req = frappe.get_doc("OpenApi Signature Request", request_name)
-	if req.stato not in ("otp_inviato", "firma_in_corso"):
+	if req.stato not in ("in_corso", "bozza"):
 		frappe.throw(f"Sessione {request_name} non annullabile (stato={req.stato})")
 	req.stato = "annullata"
 	req.flags.ignore_permissions = True
@@ -526,40 +606,40 @@ def verify_external(*, file_bytes: bytes, filename: str | None = None,
 		on_charge(cost, f"Validazione firma {filename or ''}".strip())
 
 	b64 = base64.b64encode(file_bytes).decode("ascii")
-	data = esign_client.verify_signed_file(b64, filename=filename)
+	data = esign_client.verify_signed_file(b64)
 
-	valid = bool(
-		data.get("valid")
-		or data.get("isValid")
-		or (data.get("overallStatus") or "").lower() in ("valid", "passed", "ok")
-		or (data.get("status") or "").lower() in ("valid", "passed", "ok")
-	)
-	signers_raw = data.get("signers") or data.get("signatures") or []
+	# Schema OAS: data.overallVerified (bool) + data.signatureReportList[]
+	overall_verified = bool(data.get("overallVerified"))
+	reports = data.get("signatureReportList") or []
+
 	signers = []
-	for s in signers_raw:
-		if not isinstance(s, dict):
+	for r in reports:
+		if not isinstance(r, dict):
 			continue
 		signers.append({
-			"cn": s.get("commonName") or s.get("cn") or s.get("subjectCN") or s.get("signerCN"),
-			"issuer": s.get("issuer"),
-			"expires_at": s.get("certificateExpiry") or s.get("expiresAt") or s.get("expiryDate"),
-			"valid_chain": s.get("validChain", s.get("isChainValid")),
+			"cn": r.get("subjectCN") or r.get("signerCN"),
+			"issuer": r.get("issuerCN") or r.get("issuerDN"),
+			"expires_at": r.get("signerCertificateNotAfter"),
+			"valid_chain": r.get("integrity"),
+			"cert_status": r.get("signerCertificateStatus"),
+			"qc_compliance": r.get("qcComplianceStatus"),
+			"signature_date": r.get("signatureDate") or r.get("trustedSignatureDate"),
 		})
 
 	result = {
-		"valid": valid,
+		"valid": overall_verified,
 		"signers": signers,
-		"eidas_compliant": data.get("eidasCompliant") or data.get("eIDASCompliant"),
-		"details": data.get("details") or data.get("validationDetails"),
+		"signature_format": data.get("signatureFormat"),
+		"nr_of_signatures": data.get("nrOfSignatures"),
+		"check_date": data.get("checkDate") or data.get("verificationDate"),
 		"raw": data,
 	}
 
-	if not valid:
+	if not overall_verified:
 		frappe.throw(
-			"Firma non valida: " + json.dumps(
-				{k: result[k] for k in ("signers", "details") if result[k]},
-				default=str, ensure_ascii=False,
-			)
+			"Firma non valida secondo OpenAPI eSignature. Dettagli: "
+			+ json.dumps({k: result[k] for k in ("signers", "signature_format")},
+			              default=str, ensure_ascii=False)
 		)
 	if not signers:
 		frappe.throw(
