@@ -167,9 +167,15 @@ def save_notifica(data_ok):
 def supplier_invoice():
     """
     Wrapper per retrocompatibilità - delega al provider SDI
-    Mantiene allow_guest=True per compatibilità
+    Mantiene allow_guest=True per compatibilità con il callback openapi.it.
+
+    Il webhook arriva come Guest (openapi.it non si autentica come utente Frappe);
+    il processing legge Company / Purchase Invoice / Supplier che Guest non vede,
+    quindi eleviamo a Administrator per la durata dell'elaborazione.
     """
     data = json.loads(frappe.request.data)
+    original_user = frappe.session.user
+    frappe.set_user("Administrator")
     try:
         import italian_invoice.utilities.fatture as fatture
 
@@ -186,6 +192,8 @@ def supplier_invoice():
     except Exception as e:
         log_sdi_webhook("supplier-invoice", data, error=str(e))
         raise
+    finally:
+        frappe.set_user(original_user)
 
 
 @frappe.whitelist(allow_guest=False)
