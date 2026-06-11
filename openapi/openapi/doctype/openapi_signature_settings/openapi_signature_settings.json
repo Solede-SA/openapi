@@ -19,7 +19,6 @@
    "fieldtype": "Link",
    "label": "Servizio",
    "options": "OpenApi Services",
-   "default": "eSignature",
    "read_only": 1
   },
   {
