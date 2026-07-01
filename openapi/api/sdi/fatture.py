@@ -29,6 +29,55 @@ def invia_fattura(docname, doctype):
 
 
 @frappe.whitelist()
+def verifica_stato_sdi(docname, doctype):
+    """
+    Emergenza SDI: interroga il provider per lo stato reale di una fattura già
+    inviata e riallinea Transazione SDI se una notifica non ha mai aggiornato
+    il documento (es. webhook non arrivato/non processato).
+    """
+    frappe.only_for("System Manager")
+
+    info = frappe.db.get_value(doctype, docname, ["custom_transazione_sdi", "company"], as_dict=True)
+    if not info.custom_transazione_sdi:
+        frappe.throw("Questa fattura non ha una Transazione SDI associata.")
+
+    provider = fatture.get_sdi_provider(info.company)
+    return provider.reconcile_status(info.custom_transazione_sdi)
+
+
+@frappe.whitelist()
+def forza_reinvio_sdi(docname, doctype, motivo):
+    """
+    Emergenza SDI: forza il reinvio della fattura a SDI anche se già in stato
+    "Inviata". Da usare solo quando è confermato (es. tramite verifica_stato_sdi)
+    che SDI non ha mai ricevuto la trasmissione precedente - reinviare una
+    fattura già consegnata a SDI genera una trasmissione duplicata.
+    """
+    frappe.only_for("System Manager")
+
+    if not motivo or not motivo.strip():
+        frappe.throw("Indicare un motivo per il reinvio di emergenza.")
+
+    doc = frappe.get_doc(doctype, docname)
+    transazione_precedente = doc.custom_transazione_sdi
+
+    # Riusa lo stesso invio di invia_fattura(): non esiste un guard server-side
+    # sullo stato, il "forzare" qui è la conferma esplicita di un System Manager.
+    message = invia_fattura(docname, doctype)
+    doc.reload()
+
+    doc.add_comment(
+        "Comment",
+        f"Reinvio di emergenza a Sistema di Interscambio richiesto da {frappe.session.user}.<br>"
+        f"Motivo: {motivo}<br>"
+        f"Transazione SDI precedente: {transazione_precedente or 'nessuna'}<br>"
+        f"Esito: {message}",
+    )
+
+    return message
+
+
+@frappe.whitelist()
 def download(docname, doctype, type):
     """
     Wrapper per retrocompatibilità - usa il provider SDI configurato
