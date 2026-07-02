@@ -10,6 +10,7 @@ Riproduce il pattern di apps/openapi/openapi/api/aziende/company_start.py:
 Risposta normalizzata:
 {
   "success": bool,
+  "pending": bool,                      # True = sourcing del provider in corso, ritentare
   "lat": float | None, "lon": float | None,
   "confidence": float | None,           # 0..1
   "place_type": str | None,             # "premise"/"street"/"stairs"/"square"/...
@@ -21,6 +22,7 @@ Risposta normalizzata:
 """
 
 import hashlib
+import time
 
 import frappe
 import requests
@@ -29,6 +31,31 @@ import openapi.tools.common_data as common_data
 
 
 CACHE_TTL_SECONDS = 7 * 24 * 3600  # 7 giorni
+
+# Il Geocoder OpenAPI (provider HERE) risponde in modo asincrono: alla primissima
+# richiesta di un indirizzo mai visto ritorna success=True, sourced=True, element vuoto
+# ("ho avviato il sourcing, richiedi tra poco"). Non e' un errore: ritentiamo un numero
+# limitato di volte. Costanti tenute piccole perche' il geocoding gira in Address.before_save
+# (anche nel checkout portale, sincrono): il caso di sourcing lento e' gestito dallo stato
+# "Pending" + bottone "Aggiorna geocoder", non allungando l'attesa dell'utente.
+SOURCING_RETRY_MAX = 1  # tentativi aggiuntivi oltre al primo
+SOURCING_RETRY_DELAY_SEC = 1.5  # attesa tra i tentativi
+
+
+def _is_sourcing_pending(payload) -> bool:
+    """
+    True se la risposta indica che il provider ha avviato il sourcing ma il risultato
+    non e' ancora pronto: success=True, sourced=True, element non e' un dict popolato
+    (tipicamente lista vuota []). Va ritentato, non trattato come "nessun risultato".
+    """
+    if not isinstance(payload, dict):
+        return False
+    if not payload.get("success"):
+        return False
+    if not payload.get("sourced"):
+        return False
+    element = payload.get("element")
+    return not (isinstance(element, dict) and element)
 
 
 def _get_company_token():
@@ -47,6 +74,7 @@ def _normalize_response(payload):
     """
     base = {
         "success": False,
+        "pending": False,
         "lat": None, "lon": None,
         "street_number": None, "street_name": None,
         "formatted_address": None,
@@ -60,8 +88,12 @@ def _normalize_response(payload):
     if not payload.get("success", True):
         return {**base, "error": payload.get("message") or "Errore geocoder"}
 
+    if _is_sourcing_pending(payload):
+        return {**base, "pending": True,
+                "error": "Geocodifica in corso — sourcing del provider non completato"}
+
     element = payload.get("element")
-    if not isinstance(element, dict):
+    if not isinstance(element, dict) or not element:
         return {**base, "error": "Geocoder: nessun risultato"}
 
     lat = element.get("latitude")
@@ -82,6 +114,7 @@ def _normalize_response(payload):
     ]))
 
     return {
+        **base,
         "success": lat is not None and lon is not None,
         "lat": float(lat) if lat is not None else None,
         "lon": float(lon) if lon is not None else None,
@@ -92,8 +125,6 @@ def _normalize_response(payload):
         "pincode": element.get("postalCode") or "",
         "state": province,
         "country": element.get("countryCode") or element.get("country") or "",
-        "raw": payload,
-        "error": None,
     }
 
 
@@ -132,20 +163,27 @@ def geocode_address(query):
     }
 
     try:
-        response = requests.post(url, headers=headers, json={"address": query}, timeout=10)
-        if response.status_code != 200:
-            details = None
-            try:
-                details = response.json()
-            except Exception:
-                details = response.text[:500]
-            frappe.log_error(
-                f"Geocoder HTTP {response.status_code}: {details}",
-                "openapi.geocode",
-            )
-            return {"error": f"Geocoder HTTP {response.status_code}", "details": details, "success": False}
-        normalized = _normalize_response(response.json())
-        # Salva in cache solo le risposte valide
+        payload = None
+        for attempt in range(SOURCING_RETRY_MAX + 1):
+            response = requests.post(url, headers=headers, json={"address": query}, timeout=10)
+            if response.status_code != 200:
+                details = None
+                try:
+                    details = response.json()
+                except Exception:
+                    details = response.text[:500]
+                frappe.log_error(
+                    f"Geocoder HTTP {response.status_code}: {details}",
+                    "openapi.geocode",
+                )
+                return {"error": f"Geocoder HTTP {response.status_code}", "details": details, "success": False}
+            payload = response.json()
+            # Il provider ha solo avviato il sourcing: ritenta finche' restano tentativi.
+            if not _is_sourcing_pending(payload) or attempt == SOURCING_RETRY_MAX:
+                break
+            time.sleep(SOURCING_RETRY_DELAY_SEC)
+        normalized = _normalize_response(payload)
+        # Salva in cache solo le risposte valide (mai il "pending": va ririchiesto)
         if normalized.get("success"):
             frappe.cache.set_value(cache_key, normalized, expires_in_sec=CACHE_TTL_SECONDS)
         return normalized

@@ -49,6 +49,10 @@ def _compute_warnings(addr, geo: dict) -> list:
     elif not re.search(r"\d", line1):
         warnings.append("Numero civico non riconoscibile in 'address_line1'")
 
+    if geo.get("pending"):
+        warnings.append("Geocodifica in corso — risalva o premi «Aggiorna geocoder» tra qualche istante")
+        return warnings
+
     if not geo.get("success"):
         warnings.append(f"Indirizzo non riconosciuto dal geocoder ({geo.get('error') or 'no result'})")
         return warnings
@@ -126,7 +130,9 @@ def validate_and_geocode_address(address_doc, force=False):
         address_doc.geocode_confidence = None
         address_doc.geocode_place_type = ""
         address_doc.geocode_formatted_address = ""
-        address_doc.geocode_status = "Error"
+        # "pending": sourcing async non ancora completato dopo i retry — stato transitorio,
+        # non un errore (si risolve al salvataggio/refresh successivo).
+        address_doc.geocode_status = "Pending" if geo.get("pending") else "Error"
 
     address_doc.geocode_warnings = "\n".join(f"• {w}" for w in warnings) if warnings else ""
     address_doc.geocode_last_run = frappe.utils.now()
