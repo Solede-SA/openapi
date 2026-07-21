@@ -21,4 +21,5 @@ build-backend = "flit_core.buildapi"
 
 [tool.bench.frappe-dependencies]
 frappe = ">=16.0.0,<17.0.0"
+erpnext = ">=16.0.0,<17.0.0"  # Link a Bank Account e Customer, hook su Company/Customer/Sales Invoice/Supplier
 italian_invoice = ">=0.0.1"  # import diretti: italian_invoice.utilities.fatture (api/sdi, api/eInvoice)

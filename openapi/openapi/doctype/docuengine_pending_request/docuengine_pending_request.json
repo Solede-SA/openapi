@@ -17,7 +17,6 @@
   "document_name",
   "column_break_request",
   "cost_eur",
-  "documento_cliente",
   "section_break_payload",
   "search_payload",
   "section_break_error",
@@ -106,14 +105,6 @@
    "label": "Costo (EUR)",
    "options": "EUR",
    "read_only": 1
-  },
-  {
-   "fieldname": "documento_cliente",
-   "fieldtype": "Link",
-   "label": "Documento Cliente",
-   "options": "Documento Cliente",
-   "read_only": 1,
-   "description": "Popolato quando state=done."
   },
   {
    "collapsible": 1,
