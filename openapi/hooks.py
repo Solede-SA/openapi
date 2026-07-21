@@ -4,7 +4,8 @@ app_publisher = "Solede SA"
 app_description = "Gestione OpenApi"
 app_email = "info@solede.com"
 app_license = "AGPLv3"
-# required_apps = []
+# import di modulo: italian_invoice.utilities.fatture (api/sdi/fatture, api/eInvoice)
+required_apps = ["italian_invoice"]
 
 # Includes in <head>
 # ------------------
