@@ -77,7 +77,12 @@ app_include_js = [
 # marcate come eseguite senza girare, quindi `after_install` è l'unica via che ci arriva; su un sito
 # esistente il servizio nuovo arriva con `after_migrate`, senza una patch dedicata per ognuno.
 after_install = "openapi.install.ensure_services"
-after_migrate = "openapi.install.ensure_services"
+after_migrate = [
+	"openapi.install.ensure_services",
+	# Il layout del workspace vive nel JSON dell'app, ma Frappe v16 non riallinea un Workspace
+	# già esistente: senza questo, una voce aggiunta al file non comparirebbe mai.
+	"openapi.install.sync_openapi_workspace",
+]
 
 # Uninstallation
 # ------------

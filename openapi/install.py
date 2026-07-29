@@ -11,6 +11,9 @@ di sviluppo il servizio SDI punta a un host locale): riscriverli a ogni migrazio
 quella configurazione senza dirlo a nessuno.
 """
 
+import json
+import os
+
 import frappe
 
 # Nome del servizio → indirizzo di produzione. Gli ambienti di prova NON sono record separati: il
@@ -41,6 +44,49 @@ def ensure_services():
 	if created or linked:
 		frappe.db.commit()
 	return created
+
+
+def sync_workspace_from_json(app, workspace, module=None):
+	"""Riallinea il layout di un Workspace pubblico al JSON dell'app.
+
+	Serve perché **Frappe v16 non riallinea un Workspace già esistente**: al primo `bench migrate` lo
+	crea dal JSON e poi non lo guarda più. Una voce aggiunta al JSON dopo il debutto dell'app non
+	comparirebbe mai — è così che la sezione dei messaggi non si vedeva pur essendo nel file.
+
+	Sovrascrive `content`, `links` e `shortcuts`: il JSON dell'app è l'unica fonte del layout, quindi
+	le modifiche fatte a mano dall'interfaccia vengono sostituite. Idempotente.
+
+	La barra laterale NON si tocca qui: ogni app la costruisce a modo suo — bookfit la deriva dalle
+	scorciatoie, openapi la tiene in una fixture — e generalizzare anche quella vorrebbe dire
+	scegliere per entrambe.
+	"""
+	module = module or app
+	path = os.path.join(
+		frappe.get_app_path(app), frappe.scrub(module), "workspace",
+		frappe.scrub(workspace), f"{frappe.scrub(workspace)}.json",
+	)
+	with open(path) as handle:
+		data = json.load(handle)
+
+	if not frappe.db.exists("Workspace", workspace):
+		frappe.get_doc(data).insert(ignore_permissions=True)
+		return
+
+	doc = frappe.get_doc("Workspace", workspace)
+	doc.content = data["content"]
+	doc.set("links", data["links"])
+	doc.set("shortcuts", data["shortcuts"])
+	# `type` è diventato obbligatorio dopo che alcuni workspace erano già stati creati: un record
+	# nato prima ce l'ha vuoto e il primo salvataggio fallirebbe su un campo che non stiamo nemmeno
+	# toccando. Si completa col valore predefinito del DocType.
+	doc.type = doc.type or data.get("type") or "Workspace"
+	doc.save(ignore_permissions=True)
+
+
+def sync_openapi_workspace():
+	"""Riallinea il Workspace «Openapi» al JSON dell'app, a ogni migrazione."""
+	sync_workspace_from_json("openapi", "Openapi")
+	frappe.db.commit()
 
 
 def _link_sms_settings() -> bool:
