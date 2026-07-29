@@ -72,7 +72,12 @@ app_include_js = [
 # ------------
 
 # before_install = "openapi.install.before_install"
-# after_install = "openapi.install.after_install"
+
+# Registro dei servizi: su entrambi gli agganci di proposito. Su un sito nuovo le patch vengono
+# marcate come eseguite senza girare, quindi `after_install` è l'unica via che ci arriva; su un sito
+# esistente il servizio nuovo arriva con `after_migrate`, senza una patch dedicata per ognuno.
+after_install = "openapi.install.ensure_services"
+after_migrate = "openapi.install.ensure_services"
 
 # Uninstallation
 # ------------

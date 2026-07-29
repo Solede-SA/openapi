@@ -31,6 +31,9 @@ import time
 import frappe
 import requests
 
+from openapi.api._client import OpenApiService
+from openapi.api._client import unwrap as _unwrap
+
 POLL_INTERVAL_SEC = 4
 SIGN_POLL_MAX_SEC = 90
 DOWNLOAD_TIMEOUT_SEC = 60
@@ -52,68 +55,29 @@ SIGN_STATE_PENDING = {"WAIT_VALIDATION", "WAIT_SIGN", "WAIT_SIGNER"}
 SERVICE_NAME = "eSignature"
 SANDBOX_HOST_REPLACE = ("esignature.openapi.com", "test.esignature.openapi.com")
 
+_api = OpenApiService(
+	SERVICE_NAME,
+	created_by="openapi.install.ensure_services",
+	sandbox_setting=("OpenApi Signature Settings", "sandbox_mode"),
+	sandbox_host_replace=SANDBOX_HOST_REPLACE,
+)
+
 
 # --- Configurazione --------------------------------------------------------
-
-def _is_sandbox() -> bool:
-	value = frappe.db.get_single_value("OpenApi Signature Settings", "sandbox_mode")
-	return bool(value)
-
+# Base URL (con la riscrittura verso l'ambiente di prova), token, header ed errori vivono in
+# `api/_client.py`, condivisi con gli altri servizi openapi.com. Qui restano solo i nomi con cui le
+# primitive qui sotto li chiamano.
 
 def _base_url() -> str:
-	url = frappe.db.get_value("OpenApi Services", SERVICE_NAME, "url")
-	if not url:
-		frappe.throw(
-			f"OpenApi Services '{SERVICE_NAME}' non configurato. "
-			f"Eseguire 'bench migrate' (la patch setup_esignature_service crea il record)."
-		)
-	url = url.rstrip("/")
-	if _is_sandbox():
-		url = url.replace(SANDBOX_HOST_REPLACE[0], SANDBOX_HOST_REPLACE[1])
-	return url
-
-
-def _resolve_token(token: str | None = None) -> str:
-	if token:
-		return token
-	company = frappe.defaults.get_user_default("Company") or frappe.defaults.get_global_default("company")
-	if company:
-		tok = frappe.db.get_value("Company", company, "custom_open_api_token")
-		if tok:
-			return tok
-	frappe.throw(
-		f"Token OpenAPI non configurato su Company '{company}'. "
-		f"Imposta Company.custom_open_api_token, oppure passa token esplicito."
-	)
-	return ""  # unreachable
+	return _api.base_url()
 
 
 def _headers(token: str | None = None, json_content: bool = True, accept: str = "application/json") -> dict:
-	tok = _resolve_token(token).strip()
-	if not tok.lower().startswith("bearer "):
-		tok = f"Bearer {tok}"
-	h = {
-		"Authorization": tok,
-		"Accept": accept,
-	}
-	if json_content:
-		h["Content-Type"] = "application/json"
-	return h
+	return _api.headers(token, json_content=json_content, accept=accept)
 
 
 def _raise_error(method: str, path: str, response: requests.Response):
-	try:
-		body = response.json()
-	except Exception:
-		body = response.text[:500]
-	frappe.throw(f"OpenAPI eSignature {method} {path} → {response.status_code}: {body}")
-
-
-def _unwrap(body):
-	"""Estrae il campo `data` dalla response (OpenAPI wrapper standard)."""
-	if isinstance(body, dict) and "data" in body:
-		return body["data"]
-	return body
+	_api.raise_error(method, path, response)
 
 
 # --- Certificati -----------------------------------------------------------

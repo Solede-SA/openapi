@@ -21,6 +21,8 @@ import time
 import frappe
 import requests
 
+from openapi.api._client import OpenApiService, as_list
+
 POLL_INTERVAL_SEC = 4
 POLL_MAX_SEC = 120
 DOWNLOAD_TIMEOUT_SEC = 60
@@ -30,51 +32,23 @@ ERROR_STATES = {"error", "failed", "ko", "rejected"}
 
 SERVICE_NAME = "Docuengine"
 
+_api = OpenApiService(SERVICE_NAME, created_by="openapi.install.ensure_services")
+
 
 # --- Configurazione --------------------------------------------------------
+# Base URL, token, header ed errori vivono in `api/_client.py`, condivisi con gli altri servizi
+# openapi.com. Qui restano solo i nomi con cui le primitive qui sotto li chiamano.
 
 def _base_url() -> str:
-	url = frappe.db.get_value("OpenApi Services", SERVICE_NAME, "url")
-	if not url:
-		frappe.throw(
-			f"OpenApi Services '{SERVICE_NAME}' non configurato. "
-			f"Eseguire 'bench migrate' (la patch setup_docuengine_service crea il record)."
-		)
-	return url.rstrip("/")
-
-
-def _resolve_token(token: str | None = None) -> str:
-	if token:
-		return token
-	company = frappe.defaults.get_user_default("Company") or frappe.defaults.get_global_default("company")
-	if company:
-		tok = frappe.db.get_value("Company", company, "custom_open_api_token")
-		if tok:
-			return tok
-	frappe.throw(
-		f"Token OpenAPI non configurato su Company '{company}'. "
-		f"Imposta Company.custom_open_api_token, oppure passa token esplicito."
-	)
-	return ""  # unreachable
+	return _api.base_url()
 
 
 def _headers(token: str | None = None) -> dict:
-	tok = _resolve_token(token).strip()
-	if not tok.lower().startswith("bearer "):
-		tok = f"Bearer {tok}"
-	return {
-		"Authorization": tok,
-		"Content-Type": "application/json",
-		"Accept": "application/json",
-	}
+	return _api.headers(token)
 
 
 def _raise_error(method: str, path: str, response: requests.Response):
-	try:
-		body = response.json()
-	except Exception:
-		body = response.text[:500]
-	frappe.throw(f"OpenAPI Docuengine {method} {path} → {response.status_code}: {body}")
+	_api.raise_error(method, path, response)
 
 
 # --- Primitive REST --------------------------------------------------------
@@ -85,15 +59,8 @@ def list_documents(token: str | None = None) -> list[dict]:
 	r = requests.get(url, headers=_headers(token), timeout=30)
 	if r.status_code >= 400:
 		_raise_error("GET", "/documents", r)
-	body = r.json()
 	# La forma può essere lista diretta o {data: [...]} o {documents: [...]}
-	if isinstance(body, list):
-		return body
-	if isinstance(body, dict):
-		for key in ("data", "documents", "items"):
-			if isinstance(body.get(key), list):
-				return body[key]
-	return []
+	return as_list(r.json(), "data", "documents", "items")
 
 
 def submit_request(document_id: str, search: dict, token: str | None = None) -> dict:
@@ -158,14 +125,7 @@ def list_request_files(request_id: str, token: str | None = None) -> list[dict]:
 	r = requests.get(f"{_base_url()}{path}", headers=_headers(token), timeout=30)
 	if r.status_code >= 400:
 		_raise_error("GET", path, r)
-	body = r.json()
-	if isinstance(body, list):
-		return body
-	if isinstance(body, dict):
-		for key in ("data", "files", "documents"):
-			if isinstance(body.get(key), list):
-				return body[key]
-	return []
+	return as_list(r.json(), "data", "files", "documents")
 
 
 def download_signed(url: str) -> bytes:

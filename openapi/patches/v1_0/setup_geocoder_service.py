@@ -1,26 +1,12 @@
+"""Crea il record del servizio se manca.
+
+Il registro degli indirizzi vive in `openapi.install.SERVICES`, ed è agganciato anche a
+`after_install`/`after_migrate`: questa patch resta per non spezzare il registro delle patch dei
+siti che l'hanno già eseguita, e delega, invece di ripetere qui l'indirizzo del servizio.
 """
-Crea il record OpenApi Services "Geocoder" se non esiste.
 
-URL di default: https://geocoding.openapi.it
-L'utente puo' modificarlo dal desk se l'endpoint differisce.
-"""
-
-import frappe
-
-
-SERVICE_NAME = "Geocoder"
-DEFAULT_URL = "https://geocoding.openapi.it"
+from openapi.install import ensure_services
 
 
 def execute():
-    if frappe.db.exists("OpenApi Services", SERVICE_NAME):
-        return
-    doc = frappe.get_doc({
-        "doctype": "OpenApi Services",
-        "name": SERVICE_NAME,
-        "titolo_servizio": SERVICE_NAME,
-        "url": DEFAULT_URL,
-    })
-    doc.flags.ignore_permissions = True
-    doc.insert(ignore_if_duplicate=True)
-    frappe.db.commit()
+	ensure_services()

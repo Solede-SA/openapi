@@ -1,0 +1,113 @@
+{
+ "actions": [],
+ "creation": "2026-07-29 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "issingle": 1,
+ "field_order": [
+  "service",
+  "sandbox_mode",
+  "sandbox_token",
+  "column_break_main",
+  "sender_alias",
+  "callback_secret",
+  "senders_section",
+  "sender_company_website",
+  "sender_industry",
+  "sender_relationship",
+  "senders_state"
+ ],
+ "fields": [
+  {
+   "fieldname": "service",
+   "fieldtype": "Link",
+   "label": "Servizio",
+   "options": "OpenApi Services",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "sandbox_mode",
+   "fieldtype": "Check",
+   "label": "Ambiente di prova",
+   "description": "Se attivo, il client punta a test.sms.openapi.com invece di sms.openapi.com: i messaggi vengono validati e conteggiati ma non consegnati, e non si paga nulla."
+  },
+  {
+   "fieldname": "sandbox_token",
+   "fieldtype": "Password",
+   "label": "Chiave dell'ambiente di prova",
+   "depends_on": "sandbox_mode",
+   "description": "Token del Sandbox Token List della console OpenAPI, con lo scope SMS v2. Serve un campo a se' perche' su openapi.com Prod e Sandbox sono due API key distinte: la chiave di produzione nell'ambiente di prova viene rifiutata con «Wrong Token». In produzione non si usa: li' vale la chiave condivisa su Company.custom_open_api_token."
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sender_alias",
+   "fieldtype": "Data",
+   "label": "Mittente",
+   "length": 11,
+   "description": "Alias alfanumerico mostrato al destinatario: da 3 a 11 caratteri, mai solo cifre. Deve essere gia' registrato e approvato sulla console OpenAPI. In Italia va anche registrato nel registro AGCOM degli alias, cosa che richiede partita IVA e PEC italiane: per questo l'alias e' uno solo, della piattaforma, e il nome dello studio va nel testo del messaggio."
+  },
+  {
+   "fieldname": "callback_secret",
+   "fieldtype": "Password",
+   "label": "Segreto dei richiami",
+   "description": "Valore inviato da OpenAPI nell'intestazione di ogni richiamo di consegna, e verificato dal nostro endpoint. Serve a distinguere un richiamo autentico da una richiesta qualsiasi arrivata sullo stesso indirizzo."
+  },
+  {
+   "fieldname": "senders_section",
+   "fieldtype": "Section Break",
+   "label": "Stato dei mittenti"
+  },
+  {
+   "fieldname": "sender_company_website",
+   "fieldtype": "Data",
+   "label": "Sito dell'azienda",
+   "description": "Dati che il fornitore chiede per registrare il mittente. Si compilano una volta: la registrazione avviene per paese di destinazione, e il pulsante «Registra il mittente» la manda per Italia e Svizzera."
+  },
+  {
+   "fieldname": "sender_industry",
+   "fieldtype": "Data",
+   "label": "Settore"
+  },
+  {
+   "fieldname": "sender_relationship",
+   "fieldtype": "Data",
+   "length": 60,
+   "label": "Legame fra mittente e azienda",
+   "description": "Massimo 60 caratteri: e' un limite del fornitore. Es. «Marchio della piattaforma SaaS di Solede SA»."
+  },
+  {
+   "fieldname": "senders_state",
+   "fieldtype": "Small Text",
+   "label": "Registrazioni presso il fornitore",
+   "read_only": 1,
+   "description": "Finche' un mittente non e' APPROVED per un paese, ogni invio verso quel paese viene rifiutato. In produzione la revisione e' manuale; nell'ambiente di prova l'approvazione e' immediata. Usa il pulsante «Aggiorna stato mittenti» per rileggere dal fornitore."
+  }
+ ],
+ "modified": "2026-07-29 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Openapi",
+ "name": "OpenApi SMS Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

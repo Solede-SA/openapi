@@ -1,26 +1,12 @@
-"""Crea il record OpenApi Services "eSignature" se non esiste.
+"""Crea il record del servizio se manca.
 
-URL di default: https://esignature.openapi.com (produzione).
-La modalità sandbox è gestita da OpenApi Signature Settings.sandbox_mode che fa
-puntare il client a https://test.esignature.openapi.com.
+Il registro degli indirizzi vive in `openapi.install.SERVICES`, ed è agganciato anche a
+`after_install`/`after_migrate`: questa patch resta per non spezzare il registro delle patch dei
+siti che l'hanno già eseguita, e delega, invece di ripetere qui l'indirizzo del servizio.
 """
 
-import frappe
-
-
-SERVICE_NAME = "eSignature"
-DEFAULT_URL = "https://esignature.openapi.com"
+from openapi.install import ensure_services
 
 
 def execute():
-	if frappe.db.exists("OpenApi Services", SERVICE_NAME):
-		return
-	doc = frappe.get_doc({
-		"doctype": "OpenApi Services",
-		"name": SERVICE_NAME,
-		"titolo_servizio": SERVICE_NAME,
-		"url": DEFAULT_URL,
-	})
-	doc.flags.ignore_permissions = True
-	doc.insert(ignore_if_duplicate=True)
-	frappe.db.commit()
+	ensure_services()
