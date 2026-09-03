@@ -16,7 +16,8 @@ frappe.ui.form.on('Sales Invoice', {
             });
         }
 
-        if (['NS', 'EC02', 'Non Inviata', undefined].includes(frm.doc.custom_stato_invio)) {
+        // Solo fatture confermate: una bozza può avere un nome provvisorio (BOZZA-…).
+        if (frm.doc.docstatus === 1 && ['NS', 'EC02', 'Non Inviata', undefined].includes(frm.doc.custom_stato_invio)) {
             frm.add_custom_button(
                 __("Invia a Sistema di Interscambio"),
                 () => call_sdi_action("openapi.api.sdi.fatture.invia_fattura", {
