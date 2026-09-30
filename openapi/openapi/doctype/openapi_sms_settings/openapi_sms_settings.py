@@ -56,6 +56,7 @@ class OpenApiSMSSettings(Document):
 				company_website=self.sender_company_website,
 				industry=self.sender_industry,
 				company_relationship=self.sender_relationship,
+				pec=self.sender_pec,
 			)
 		return self.refresh_senders()
 

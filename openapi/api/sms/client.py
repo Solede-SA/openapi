@@ -57,6 +57,9 @@ CALLBACK_RETRY = 3
 SENDER_APPROVED = "APPROVED"
 # Limite del servizio sul campo che descrive il legame fra mittente e azienda.
 ALIAS_RELATIONSHIP_MAX = 60
+# Paesi in cui la registrazione dell'alias chiede la PEC (schema `SenderRegistration_<paese>`): in Italia
+# finisce nella pratica per il registro AGCOM degli alias.
+ALIAS_PEC_COUNTRIES = ("IT",)
 
 
 def send_message(
@@ -146,6 +149,7 @@ def register_alias(
 	company_website: str,
 	industry: str,
 	company_relationship: str,
+	pec: str | None = None,
 	traffic_type: str = "transactional",
 	token: str | None = None,
 ) -> dict:
@@ -155,8 +159,8 @@ def register_alias(
 	non spedisce in Svizzera. In produzione la richiesta entra in `PENDING` e passa da una revisione
 	manuale; nell'ambiente di prova viene approvata subito.
 
-	Partita IVA e PEC non si mandano qui: la conformità al registro degli alias la cura il fornitore
-	durante la revisione."""
+	I campi richiesti dipendono dal paese: per l'Italia serve anche la PEC dell'azienda che registra
+	(da settembre 2026 il servizio la rifiuta senza, con «The 'pec' field is required»)."""
 	if len(company_relationship) > ALIAS_RELATIONSHIP_MAX:
 		frappe.throw(
 			f"Il legame fra mittente e azienda non può superare {ALIAS_RELATIONSHIP_MAX} caratteri."
@@ -169,4 +173,8 @@ def register_alias(
 		"industry": industry,
 		"senderCompanyRelationship": company_relationship,
 	}
+	if country_code in ALIAS_PEC_COUNTRIES:
+		if not pec:
+			frappe.throw(f"Per registrare il mittente in {country_code} serve la PEC dell'azienda.")
+		payload["pec"] = pec
 	return _api.request("POST", "/senders/alias", token=token, json=payload)

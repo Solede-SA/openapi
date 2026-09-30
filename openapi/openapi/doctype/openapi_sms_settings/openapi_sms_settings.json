@@ -15,6 +15,7 @@
   "sender_company_website",
   "sender_industry",
   "sender_relationship",
+  "sender_pec",
   "senders_state"
  ],
  "fields": [
@@ -80,6 +81,13 @@
    "description": "Massimo 60 caratteri: e' un limite del fornitore. Es. «Marchio della piattaforma SaaS di Solede SA»."
   },
   {
+   "fieldname": "sender_pec",
+   "fieldtype": "Data",
+   "options": "Email",
+   "label": "PEC dell'azienda",
+   "description": "Serve solo per registrare il mittente in Italia: il fornitore la usa per la pratica del registro AGCOM degli alias. Dev'essere una PEC italiana."
+  },
+  {
    "fieldname": "senders_state",
    "fieldtype": "Small Text",
    "label": "Registrazioni presso il fornitore",
@@ -87,7 +95,7 @@
    "description": "Finche' un mittente non e' APPROVED per un paese, ogni invio verso quel paese viene rifiutato. In produzione la revisione e' manuale; nell'ambiente di prova l'approvazione e' immediata. Usa il pulsante «Aggiorna stato mittenti» per rileggere dal fornitore."
   }
  ],
- "modified": "2026-07-29 10:00:00.000000",
+ "modified": "2026-09-30 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Openapi",
  "name": "OpenApi SMS Settings",
