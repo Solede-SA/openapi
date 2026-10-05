@@ -97,9 +97,9 @@ frappe.provide("openapi.credit_check");
 			</tbody></table>
 			${table(
 				"Protesti",
-				["Soggetto", "Data levata", "Importo", "Comune", "Motivo mancato pagamento"],
+				["Soggetto", "Data levata", "Tipo", "Importo", "Comune", "Motivo mancato pagamento"],
 				protesti.flatMap((p) => (p.effetti || []).map((e) =>
-					[p.denominazione, e.data_levata, euro(e.importo), e.comune_levata, e.motivo_rifiuto_pagamento])),
+					[p.denominazione, e.data_levata, e.tipo_effetto, euro(e.importo), e.comune_levata, e.motivo_rifiuto_pagamento])),
 			)}
 			${table(
 				"Pregiudizievoli",

@@ -73,7 +73,7 @@ def request_negativita_check(fiscal_code, customer_name=None):
                     "success": True,
                     "request_id": request_id,
                     "status": data.get("status", "PENDING"),
-                    "message": "Richiesta inviata. Riceverai i risultati via callback o usa 'Controlla Stato'."
+                    "message": "Richiesta inviata. I risultati arrivano in automatico, oppure usa 'Controlla Stato'."
                 }
             else:
                 return {
