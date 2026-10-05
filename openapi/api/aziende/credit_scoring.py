@@ -7,8 +7,18 @@ import requests
 import openapi.tools.common_data as common_data
 
 
+# risk_score_description quando ci sono protesti, pregiudizievoli o procedure:
+# il servizio risponde in italiano, la specifica documenta l'inglese
+NEGATIVE_EVENTS_DESCRIPTIONS = {"presenza di eventi negativi", "presence of negative events"}
+
+
 def get_company_doc():
     return frappe.get_doc("Company", frappe.defaults.get_global_default("company"))
+
+
+def has_negative_events(credit_data):
+    """True se il punteggio segnala eventi negativi: il dettaglio lo dà la verifica negatività."""
+    return credit_data.get("risk_score_description") in NEGATIVE_EVENTS_DESCRIPTIONS
 
 
 @frappe.whitelist()

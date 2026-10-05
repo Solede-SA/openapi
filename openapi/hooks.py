@@ -15,6 +15,7 @@ required_apps = ["italian_invoice"]
 app_include_js = [
     "/assets/openapi/js/openapi_party_utils.js",
     "/assets/openapi/js/geocode_suggestions.js",
+    "/assets/openapi/js/credit_check_dialogs.js",
 ]
 
 # include js, css files in header of web template
@@ -152,6 +153,9 @@ scheduler_events = {
 		"openapi.openapi.doctype.openapi_marca_temporale_settings.openapi_marca_temporale_settings.check_lotto_e_alert",
 	],
 	"cron": {
+		"*/10 * * * *": [
+			"openapi.api.aziende.negativita_persona.poll_pending_requests",
+		],
 		"*/30 * * * *": [
 			"openapi.api.esignature.services.poll_pending_certificates",
 		],

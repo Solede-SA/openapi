@@ -6,24 +6,22 @@ import json
 import requests
 import openapi.tools.common_data as common_data
 
+# Secondi di attesa per chiamata: il job programmato non deve restare appeso
+REQUEST_TIMEOUT = 30
+
 
 def get_company_doc():
     return frappe.get_doc("Company", frappe.defaults.get_global_default("company"))
 
 
-def get_callback_url():
-    """Genera l'URL di callback per ricevere i risultati"""
-    site_url = frappe.utils.get_url()
-    return f"{site_url}/api/method/openapi.api.aziende.negativita_persona.handle_callback"
-
-
 @frappe.whitelist()
 def request_negativita_check(fiscal_code, customer_name=None):
     """
-    Invia richiesta di verifica negatività per persona fisica.
+    Invia richiesta di verifica negatività per persona fisica o giuridica.
+    Il risultato arriva in differita: lo raccoglie poll_pending_requests (o «Controlla Stato»).
 
     Args:
-        fiscal_code: Codice fiscale della persona
+        fiscal_code: Codice fiscale della persona (16 caratteri) o dell'azienda (11 cifre)
         customer_name: Nome del Customer (opzionale, per salvare il request_id)
 
     Returns:
@@ -35,9 +33,8 @@ def request_negativita_check(fiscal_code, customer_name=None):
     # Pulisci l'input
     fiscal_code = fiscal_code.strip().upper().replace(" ", "")
 
-    # Valida formato codice fiscale (16 caratteri alfanumerici)
-    if len(fiscal_code) != 16:
-        return {"error": "Il codice fiscale deve essere di 16 caratteri"}
+    if not (len(fiscal_code) == 16 or (len(fiscal_code) == 11 and fiscal_code.isdigit())):
+        return {"error": "Il codice fiscale deve essere di 16 caratteri (persona) o di 11 cifre (azienda)"}
 
     url = common_data.get_service("Negativita Persona", "IT-negativita")
     company = get_company_doc()
@@ -50,20 +47,10 @@ def request_negativita_check(fiscal_code, customer_name=None):
         "Content-Type": "application/json",
     }
 
-    # Prepara payload con callback
-    payload = {
-        "cf_piva": fiscal_code,
-        "callback": {
-            "url": get_callback_url(),
-            "method": "POST",
-            "headers": {
-                "Content-Type": "application/json"
-            }
-        }
-    }
+    payload = {"cf_piva": fiscal_code}
 
     try:
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
 
         if response.status_code in [200, 201, 202]:
             response_data = response.json()
@@ -130,7 +117,7 @@ def check_request_status(request_id, customer_name=None):
     }
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
 
         if response.status_code == 200:
             response_data = response.json()
@@ -139,28 +126,21 @@ def check_request_status(request_id, customer_name=None):
                 data = response_data.get("data", {})
                 status = data.get("status", "PENDING")
 
-                # Aggiorna status nel Customer se specificato
-                if customer_name:
-                    status_label = "Completata" if status == "COMPLETED" else "In Elaborazione"
-                    frappe.db.set_value("Customer", customer_name,
-                                       "custom_negativita_status", status_label)
-                    frappe.db.commit()
-
                 result = {
                     "success": True,
                     "status": status,
                     "data": data
                 }
 
-                # Se completata, ottieni anche i dettagli
+                # Se completata, ottieni i dettagli; il Customer passa a «Completata» solo con i dettagli salvati
                 if status == "COMPLETED":
                     details = get_negativita_details(request_id)
-                    if details.get("success"):
-                        result["details"] = details.get("data")
+                    if details.get("error"):
+                        return details
+                    result["details"] = details["data"]
 
-                        # Salva risultati nel Customer
-                        if customer_name:
-                            save_negativita_to_customer(customer_name, details.get("data", {}))
+                    if customer_name:
+                        save_negativita_to_customer(customer_name, details["data"])
 
                 return result
             else:
@@ -204,7 +184,7 @@ def get_negativita_details(request_id):
     }
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
 
         if response.status_code == 200:
             response_data = response.json()
@@ -229,62 +209,6 @@ def get_negativita_details(request_id):
         return {"error": str(e)}
 
 
-@frappe.whitelist(allow_guest=True)
-def handle_callback():
-    """
-    Gestisce il callback da OpenAPI quando la verifica è completata.
-    Endpoint: /api/method/openapi.api.aziende.negativita_persona.handle_callback
-    """
-    try:
-        data = frappe.request.get_json()
-
-        if not data:
-            frappe.log_error("Negatività Callback: nessun dato ricevuto", "OpenAPI Callback")
-            return {"success": False, "error": "No data received"}
-
-        request_id = data.get("id") or data.get("request_id")
-
-        if not request_id:
-            frappe.log_error(f"Negatività Callback: request_id mancante. Data: {data}", "OpenAPI Callback")
-            return {"success": False, "error": "Missing request_id"}
-
-        # Trova il Customer con questo request_id
-        customer_name = frappe.db.get_value(
-            "Customer",
-            {"custom_negativita_request_id": request_id},
-            "name"
-        )
-
-        if customer_name:
-            # Ottieni i dettagli e salva
-            details = get_negativita_details(request_id)
-
-            if details.get("success"):
-                save_negativita_to_customer(customer_name, details.get("data", {}))
-                frappe.db.set_value("Customer", customer_name,
-                                   "custom_negativita_status", "Completata")
-            else:
-                frappe.db.set_value("Customer", customer_name,
-                                   "custom_negativita_status", "Errore")
-                frappe.log_error(
-                    f"Errore dettagli negatività per {customer_name}: {details}",
-                    "OpenAPI Callback"
-                )
-
-            frappe.db.commit()
-        else:
-            frappe.log_error(
-                f"Negatività Callback: Customer non trovato per request_id {request_id}",
-                "OpenAPI Callback"
-            )
-
-        return {"success": True}
-
-    except Exception as e:
-        frappe.log_error(f"Negatività Callback Error: {str(e)}", "OpenAPI Callback")
-        return {"success": False, "error": str(e)}
-
-
 def save_negativita_to_customer(customer_name, data):
     """
     Salva i risultati della verifica negatività nel Customer.
@@ -298,7 +222,7 @@ def save_negativita_to_customer(customer_name, data):
     # Conta negatività per tipo
     protesti = data.get("protesti", [])
     pregiudizievoli = data.get("pregiudizievoli", [])
-    procedure = data.get("procedure_concorsuali", [])
+    procedure = data.get("procedure", [])
 
     num_protesti = len(protesti) if isinstance(protesti, list) else 0
     num_pregiudizievoli = len(pregiudizievoli) if isinstance(pregiudizievoli, list) else 0
@@ -340,17 +264,15 @@ def get_customer_negativita(customer_name):
     """
     customer = frappe.get_doc("Customer", customer_name)
 
-    if customer.customer_type != "Individual":
-        return {"error": "La verifica negatività è disponibile solo per clienti Persona Fisica"}
-
-    fiscal_code = customer.fiscal_code or customer.tax_id
-
-    if not fiscal_code:
-        return {"error": "Il cliente non ha codice fiscale"}
-
-    # Verifica formato (deve essere CF persona fisica, non P.IVA)
-    if len(fiscal_code) == 11 and fiscal_code.isdigit():
-        return {"error": "Inserire il codice fiscale della persona, non la partita IVA"}
+    if customer.customer_type == "Company":
+        fiscal_code = (customer.tax_id or "").upper().removeprefix("IT")
+        if not fiscal_code:
+            return {"error": "Il cliente non ha partita IVA"}
+    else:
+        # Persona fisica: serve il codice fiscale, non la partita IVA
+        fiscal_code = customer.fiscal_code or customer.tax_id or ""
+        if len(fiscal_code) != 16:
+            return {"error": "Il cliente non ha un codice fiscale di persona valido (16 caratteri)"}
 
     return request_negativita_check(fiscal_code, customer_name)
 
@@ -374,3 +296,20 @@ def check_customer_negativita_status(customer_name):
         return {"error": "Nessuna verifica negatività in corso per questo cliente"}
 
     return check_request_status(request_id, customer_name)
+
+
+def poll_pending_requests():
+    """Cron: raccoglie i risultati delle verifiche negatività in elaborazione.
+
+    Schedulato ogni 10 minuti (vedi hooks.py). Il salvataggio del Customer avvisa le app
+    che aspettano l'esito (es. daeok chiude i DAE Order in attesa).
+    """
+    for customer_name in frappe.get_all(
+        "Customer", filters={"custom_negativita_status": "In Elaborazione"}, pluck="name"
+    ):
+        result = check_customer_negativita_status(customer_name)
+        if result.get("error"):
+            frappe.log_error(
+                title="OpenAPI verifica negatività",
+                message=f"poll_pending_requests: errore su {customer_name}: {result}",
+            )
