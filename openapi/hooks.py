@@ -259,7 +259,6 @@ doctype_list_js = {
 }
 
 fixtures = [
-    {"dt": "Workspace Sidebar", "filters": [["module", "=", "Openapi"]]},
     {"dt": "Desktop Icon", "filters": [["app", "=", "openapi"]]},
     {
         "dt": "Custom Field",
