@@ -265,9 +265,10 @@ def get_customer_negativita(customer_name):
     customer = frappe.get_doc("Customer", customer_name)
 
     if customer.customer_type == "Company":
-        fiscal_code = (customer.tax_id or "").upper().removeprefix("IT")
+        # Gli enti senza partita IVA (associazioni) hanno solo il codice fiscale numerico
+        fiscal_code = (customer.tax_id or customer.fiscal_code or "").upper().removeprefix("IT")
         if not fiscal_code:
-            return {"error": "Il cliente non ha partita IVA"}
+            return {"error": "Il cliente non ha né partita IVA né codice fiscale"}
     else:
         # Persona fisica: serve il codice fiscale, non la partita IVA
         fiscal_code = customer.fiscal_code or customer.tax_id or ""

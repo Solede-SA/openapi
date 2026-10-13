@@ -51,6 +51,12 @@ class TestNegativitaPersona(IntegrationTestCase):
 			negativita_persona.get_customer_negativita(CUSTOMER_NAME)
 		request.assert_called_once_with("00946130945", CUSTOMER_NAME)
 
+	def test_associazione_senza_partita_iva_usa_il_codice_fiscale(self):
+		frappe.db.set_value("Customer", CUSTOMER_NAME, {"tax_id": "", "fiscal_code": "92075480134"})
+		with patch.object(negativita_persona, "request_negativita_check") as request:
+			negativita_persona.get_customer_negativita(CUSTOMER_NAME)
+		request.assert_called_once_with("92075480134", CUSTOMER_NAME)
+
 	def test_conta_le_procedure(self):
 		negativita_persona.save_negativita_to_customer(
 			CUSTOMER_NAME, {"protesti": [{"effetti": []}], "pregiudizievoli": [], "procedure": [{}, {}]}
