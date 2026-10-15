@@ -1,8 +1,10 @@
+import hmac
 import json
 import logging
 import os
 
 import frappe
+from frappe import _
 import pytz
 from dateutil.parser import parse
 
@@ -163,17 +165,34 @@ def save_notifica(data_ok):
     fattura.save()
 
 
+def authorize_guest_callback(data):
+    """openapi.it chiama senza sessione Frappe: la Company destinataria (Partita IVA del cessionario nel
+    payload) deve avere `custom_auth_header`, inviato a openapi.it con la configurazione dei callback, e la
+    richiesta deve riportarlo nell'intestazione Authorization. Una richiesta già autenticata (header con
+    un token Frappe) passa."""
+    if frappe.session.user != "Guest":
+        return
+    # search_value_in_json dà una lista se il percorso manca o compare più volte: vale solo un'unica Partita IVA
+    vat_id = search_value_in_json(data, "cessionario_committente.dati_anagrafici.id_fiscale_iva.id_codice")
+    expected = frappe.db.get_value("Company", {"tax_id": vat_id}, "custom_auth_header") if isinstance(vat_id, str) and vat_id else None
+    provided = frappe.get_request_header("Authorization") or ""
+    if not expected or not hmac.compare_digest(provided, expected):
+        frappe.throw(_("Callback non autorizzato"), frappe.AuthenticationError)
+
+
 @frappe.whitelist(allow_guest=True)
 def supplier_invoice():
     """
     Wrapper per retrocompatibilità - delega al provider SDI
     Mantiene allow_guest=True per compatibilità con il callback openapi.it.
 
-    Il webhook arriva come Guest (openapi.it non si autentica come utente Frappe);
-    il processing legge Company / Purchase Invoice / Supplier che Guest non vede,
-    quindi eleviamo a Administrator per la durata dell'elaborazione.
+    Il webhook arriva come Guest (openapi.it non si autentica come utente Frappe) e deve portare
+    il segreto condiviso della Company (authorize_guest_callback); il processing legge Company /
+    Purchase Invoice / Supplier che Guest non vede, quindi eleviamo a Administrator per la durata
+    dell'elaborazione.
     """
     data = json.loads(frappe.request.data)
+    authorize_guest_callback(data)
     original_user = frappe.session.user
     frappe.set_user("Administrator")
     try:

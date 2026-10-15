@@ -3,6 +3,8 @@ import json
 import openapi.tools.common_data as common_data
 import requests
 
+from openapi.api._client import DEFAULT_TIMEOUT_SEC
+
 
 def get_company_doc():
     return frappe.get_doc("Company", frappe.defaults.get_global_default("company"))
@@ -92,7 +94,7 @@ def search_companies(filters):
     print(f"HEADERS: {headers}")
 
     try:
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, timeout=DEFAULT_TIMEOUT_SEC)
         print(f"STATUS CODE: {response.status_code}")
         print(f"RESPONSE HEADERS: {response.headers}")
 
@@ -150,7 +152,7 @@ def get_company_start_data(vat_or_tax_code):
     print(f"HEADERS: {headers}")
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT_SEC)
         print(f"STATUS CODE: {response.status_code}")
         print(f"RESPONSE HEADERS: {response.headers}")
 
@@ -244,7 +246,7 @@ def get_company_full_data(vat_or_tax_code):
     print(f"HEADERS: {headers}")
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT_SEC)
         print(f"STATUS CODE: {response.status_code}")
         print(f"RESPONSE HEADERS: {response.headers}")
 
